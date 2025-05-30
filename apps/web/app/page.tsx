@@ -64,7 +64,7 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/backend/analyze', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
