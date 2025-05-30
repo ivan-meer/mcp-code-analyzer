@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Banner]()
+![Banner](assets\mcp-code-analyzer-banner.jpg)
 
 [![Experimental](https://img.shields.io/badge/Status-Experimental-orange?style=for-the-badge&logo=flask)](https://github.com)
 [![MCP](https://img.shields.io/badge/MCP-Enabled-blue?style=for-the-badge&logo=protocol)](https://modelcontextprotocol.io)
