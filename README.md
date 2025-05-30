@@ -1,18 +1,20 @@
 # 🚀 MCP Code Analyzer
+![Banner](assets/mcp-code-analyzer-banner.jpg)
+
 
 <div align="center">
 
 <!-- Language Navigation -->
 <p align="center">
   <a href="README.md">
-    <img src="./assets/ENG.png" alt="English" width="32" height="24" style="margin: 0 10px;"/>
+    <img src="./assets/ENG.png" alt="English" width="62" height="48" style="margin: 0 10px;"/>
   </a>
   <a href="README.ru.md">
-    <img src="./assets/RUS.png" alt="Русский" width="32" height="24" style="margin: 0 10px;"/>
+    <img src="./assets/RUS.png" alt="Русский" width="64" height="48" style="margin: 0 10px;"/>
   </a>
 </p>
 
-![Banner](assets/mcp-code-analyzer-banner.jpg)
+
 
 [![Experimental](https://img.shields.io/badge/Status-Experimental-orange?style=for-the-badge&logo=flask)](https://github.com)
 [![MCP](https://img.shields.io/badge/MCP-Enabled-blue?style=for-the-badge&logo=protocol)](https://modelcontextprotocol.io)
