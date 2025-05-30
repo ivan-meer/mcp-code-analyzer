@@ -68,5 +68,8 @@
     "*.{md,json}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "@next/swc-win32-x64-msvc": "^15.3.3"
   }
 }

@@ -1,14 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
+  // Remove experimental turbo config - using stable Turbopack
+  turbopack: {
+    // Modern Turbopack configuration
+  },
+  webpack(config) {
+    // Handle SVG files with SVGR
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    });
+    return config;
   },
   transpilePackages: ['@mcp-analyzer/ui', '@mcp-analyzer/shared'],
   images: {
