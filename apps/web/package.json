@@ -10,6 +10,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@next/swc-wasm-nodejs": "^15.3.3",
+    "@next/swc-wasm-web": "^15.3.3",
+    "@next/swc-win32-x64-msvc": "^15.3.3",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
