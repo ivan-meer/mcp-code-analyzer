@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove experimental turbo config - using stable Turbopack
-  turbopack: {
-    // Modern Turbopack configuration
-  },
+  // Временно отключаем Turbopack для стабильности
+  // turbopack: {
+  //   // Modern Turbopack configuration
+  // },
   webpack(config) {
     // Handle SVG files with SVGR
     config.module.rules.push({

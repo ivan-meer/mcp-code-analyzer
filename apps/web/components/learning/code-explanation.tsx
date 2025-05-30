@@ -22,24 +22,52 @@ export function CodeExplanation({
   const [explanation, setExplanation] = useState(initialExplanation);
   const [isLoading, setIsLoading] = useState(false);
   const [concepts, setConcepts] = useState<string[]>([]);
+  const [improvements, setImprovements] = useState<string[]>([]);
+  const [patterns, setPatterns] = useState<string[]>([]);
+  const [aiProvider, setAiProvider] = useState<string>('');
+  const [confidenceScore, setConfidenceScore] = useState<number>(0);
 
   const explainCode = async () => {
     if (!inputCode.trim()) return;
 
     setIsLoading(true);
     try {
-      // В реальном приложении здесь будет вызов AI API
-      // Пока создаем mock объяснение
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Имитация загрузки
+      // Вызов к обновленному AI API
+      const response = await fetch('/api/explain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: inputCode,
+          language: language,
+          level: 'intermediate',
+          file_path: 'example.' + language,
+          project_context: {
+            total_files: 1,
+            languages: [language]
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
       
-      const mockExplanation = generateMockExplanation(inputCode, language);
-      const mockConcepts = extractConcepts(inputCode, language);
+      setExplanation(result.explanation);
+      setConcepts(result.concepts || []);
       
-      setExplanation(mockExplanation);
-      setConcepts(mockConcepts);
+      // Добавляем новые данные от AI
+      setImprovements(result.improvements || []);
+      setPatterns(result.patterns || []);
+      setAiProvider(result.ai_provider || 'unknown');
+      setConfidenceScore(result.confidence_score || 0);
+      
     } catch (error) {
       console.error('Ошибка объяснения кода:', error);
-      setExplanation('Извините, произошла ошибка при анализе кода.');
+      setExplanation('Извините, произошла ошибка при анализе кода. Проверьте подключение к API.');
     } finally {
       setIsLoading(false);
     }
