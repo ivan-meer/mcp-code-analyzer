@@ -1,0 +1,64 @@
+{
+  "name": "mcp-code-analyzer",
+  "version": "0.1.0",
+  "description": "AI-powered code analysis and visualization platform built with Model Context Protocol",
+  "keywords": ["mcp", "code-analysis", "ai", "visualization", "typescript", "react", "fastapi"],
+  "homepage": "https://github.com/your-username/mcp-code-analyzer",
+  "bugs": {
+    "url": "https://github.com/your-username/mcp-code-analyzer/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/mcp-code-analyzer.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "MCP Code Analyzer Team",
+    "email": "team@mcp-analyzer.dev"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,json}\"",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky install",
+    "start:backend": "cd apps/api && python main.py",
+    "start:frontend": "cd apps/web && npm run dev",
+    "start:mcp": "cd packages/mcp-servers && npm run dev",
+    "setup": "npm install && npm run build"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@turbo/gen": "^1.10.12",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.48.0",
+    "eslint-config-next": "^14.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.3",
+    "turbo": "latest",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "packageManager": "npm@10.2.4",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,json}": [
+      "prettier --write"
+    ]
+  }
+}
