@@ -8,6 +8,17 @@ import json
 import sqlite3
 from pathlib import Path
 import uvicorn
+import asyncio
+import logging
+
+# Импорт AI сервисов
+from ai_services import (
+    initialize_ai_services, 
+    get_ai_manager, 
+    CodeContext, 
+    AIResponse,
+    AIServiceError
+)
 
 # Модели данных
 class ProjectAnalysisRequest(BaseModel):
@@ -35,18 +46,42 @@ class CodeExplanationRequest(BaseModel):
     code: str
     language: str = "javascript"
     level: str = "intermediate"
+    file_path: Optional[str] = None
+    project_context: Optional[Dict[str, Any]] = None
 
 class CodeExplanation(BaseModel):
     explanation: str
     concepts: List[str]
     examples: List[str]
-    related_patterns: List[str]
+    recommendations: List[str]
+    improvements: List[str] = []
+    patterns: List[str] = []
+    confidence_score: float = 0.0
+    ai_provider: str = "unknown"
+
+class ComprehensiveAnalysisRequest(BaseModel):
+    file_path: str
+    project_path: str
+    explanation_level: str = "intermediate"
+
+class ComprehensiveAnalysisResult(BaseModel):
+    explanation: Optional[Dict[str, Any]] = None
+    improvements: List[str] = []
+    patterns: List[str] = []
+    analysis_metadata: Dict[str, Any] = {}
+
+# Глобальная переменная для AI менеджера
+ai_manager = None
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Инициализация FastAPI
 app = FastAPI(
-    title="MCP Code Analyzer API",
-    description="Backend API for intelligent code analysis and visualization",
-    version="0.1.0",
+    title="MCP Code Analyzer API with AI Integration",
+    description="Backend API for intelligent code analysis and visualization with AI-powered explanations",
+    version="0.2.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -275,27 +310,217 @@ async def analyze_project(request: ProjectAnalysisRequest):
 
 @app.post("/api/explain", response_model=CodeExplanation)
 async def explain_code(request: CodeExplanationRequest):
-    """Объяснение кода (заглушка, потом подключим AI)"""
-    # Пока простая заглушка, потом подключим OpenAI/Anthropic
-    explanation = f"Этот {request.language} код выполняет следующие операции..."
+    """
+    Интеллектуальное объяснение кода с использованием AI.
+    Поддерживает OpenAI GPT и Anthropic Claude для генерации объяснений.
+    """
+    global ai_manager
     
-    # Простой анализ концепций
-    concepts = []
-    if "function" in request.code:
-        concepts.append("functions")
-    if "const" in request.code or "let" in request.code or "var" in request.code:
-        concepts.append("variables")
-    if "import" in request.code:
-        concepts.append("modules")
-    if "class" in request.code:
-        concepts.append("classes")
+    try:
+        # Создаем контекст кода для AI анализа
+        context = CodeContext(
+            file_path=request.file_path or "unknown",
+            file_content=request.code,
+            file_type=request.language,
+            project_info=request.project_context or {},
+            dependencies=[],
+            functions=[],
+            imports=[],
+            architecture_patterns=[],
+            lines_of_code=len(request.code.split('\n'))
+        )
+        
+        # Если AI менеджер доступен, используем его
+        if ai_manager and ai_manager.services:
+            try:
+                # Получаем умное объяснение от AI
+                ai_response = await ai_manager.explain_code_smart(context, request.level)
+                
+                if ai_response:
+                    # Также получаем предложения по улучшению и паттерны
+                    improvements_task = ai_manager.suggest_improvements_smart(context)
+                    patterns_task = ai_manager.detect_patterns_smart(context)
+                    
+                    improvements, patterns = await asyncio.gather(
+                        improvements_task, patterns_task, return_exceptions=True
+                    )
+                    
+                    # Обрабатываем результаты (игнорируем ошибки)
+                    improvements = improvements if not isinstance(improvements, Exception) else []
+                    patterns = patterns if not isinstance(patterns, Exception) else []
+                    
+                    # Определяем использованный провайдер
+                    used_provider = "unknown"
+                    for provider, service in ai_manager.services.items():
+                        if service.request_count > 0:
+                            used_provider = provider.value
+                            break
+                    
+                    return CodeExplanation(
+                        explanation=ai_response.explanation,
+                        concepts=ai_response.concepts,
+                        examples=ai_response.examples,
+                        recommendations=ai_response.recommendations,
+                        improvements=improvements[:5],  # Ограничиваем количество
+                        patterns=patterns[:5],
+                        confidence_score=ai_response.confidence_score,
+                        ai_provider=used_provider
+                    )
+                    
+            except AIServiceError as e:
+                logger.warning(f"AI сервис недоступен: {str(e)}. Используем fallback.")
+            except Exception as e:
+                logger.error(f"Ошибка AI анализа: {str(e)}. Используем fallback.")
+        
+        # Fallback: простой анализ без AI
+        logger.info("Используется fallback анализ без AI")
+        explanation = f"Этот {request.language} код выполняет следующие операции..."
+        
+        # Простой анализ концепций
+        concepts = []
+        if "function" in request.code:
+            concepts.append("functions")
+        if any(keyword in request.code for keyword in ["const", "let", "var"]):
+            concepts.append("variables")
+        if "import" in request.code:
+            concepts.append("modules")
+        if "class" in request.code:
+            concepts.append("classes")
+        if "async" in request.code or "await" in request.code:
+            concepts.append("asynchronous programming")
+        
+        return CodeExplanation(
+            explanation=explanation,
+            concepts=concepts,
+            examples=["Пример 1: базовое использование", "Пример 2: расширенный случай"],
+            recommendations=["Добавьте комментарии", "Используйте описательные имена переменных"],
+            improvements=[],
+            patterns=[],
+            confidence_score=0.5,
+            ai_provider="fallback"
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка при объяснении кода: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при анализе кода: {str(e)}")
+
+@app.post("/api/comprehensive-analysis", response_model=ComprehensiveAnalysisResult)
+async def comprehensive_analysis(request: ComprehensiveAnalysisRequest):
+    """
+    Комплексный AI-анализ файла с использованием всех доступных AI сервисов.
+    Предоставляет объяснение, улучшения и обнаружение паттернов.
+    """
+    global ai_manager
     
-    return CodeExplanation(
-        explanation=explanation,
-        concepts=concepts,
-        examples=["Пример 1: базовое использование", "Пример 2: расширенный случай"],
-        related_patterns=["Module Pattern", "Function Declaration"]
-    )
+    try:
+        # Проверяем существование файла
+        if not Path(request.file_path).exists():
+            raise HTTPException(status_code=404, detail="Файл не найден")
+        
+        # Анализируем файл
+        file_info = CodeAnalyzer.analyze_file(request.file_path)
+        
+        # Читаем содержимое файла
+        with open(request.file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+        
+        # Анализируем проект для контекста
+        try:
+            project_analysis = CodeAnalyzer.analyze_project(request.project_path)
+            project_context = {
+                "total_files": project_analysis.metrics["total_files"],
+                "total_lines": project_analysis.metrics["total_lines"],
+                "languages": project_analysis.metrics["languages"],
+                "architecture_patterns": project_analysis.architecture_patterns
+            }
+        except Exception:
+            project_context = {}
+        
+        # Создаем контекст для AI
+        context = CodeContext(
+            file_path=request.file_path,
+            file_content=file_content,
+            file_type=file_info.type,
+            project_info=project_context,
+            dependencies=[],
+            functions=file_info.functions,
+            imports=file_info.imports,
+            architecture_patterns=project_context.get("architecture_patterns", []),
+            lines_of_code=file_info.lines_of_code or 0
+        )
+        
+        # Выполняем комплексный анализ
+        if ai_manager and ai_manager.services:
+            try:
+                results = await ai_manager.comprehensive_analysis(context, request.explanation_level)
+                
+                # Форматируем результаты
+                explanation_data = None
+                if results.get("explanation"):
+                    explanation_data = {
+                        "text": results["explanation"].explanation,
+                        "concepts": results["explanation"].concepts,
+                        "recommendations": results["explanation"].recommendations,
+                        "confidence": results["explanation"].confidence_score
+                    }
+                
+                return ComprehensiveAnalysisResult(
+                    explanation=explanation_data,
+                    improvements=results.get("improvements", []),
+                    patterns=results.get("patterns", []),
+                    analysis_metadata=results.get("analysis_metadata", {})
+                )
+                
+            except Exception as e:
+                logger.error(f"Ошибка комплексного AI анализа: {str(e)}")
+        
+        # Fallback анализ
+        return ComprehensiveAnalysisResult(
+            explanation={
+                "text": f"Файл {Path(request.file_path).name} содержит {len(file_info.functions)} функций и {file_info.lines_of_code} строк кода.",
+                "concepts": ["file analysis", "code structure"],
+                "recommendations": ["AI анализ недоступен"],
+                "confidence": 0.3
+            },
+            improvements=["AI сервисы недоступны для детального анализа"],
+            patterns=["Автоматическое обнаружение паттернов недоступно"],
+            analysis_metadata={
+                "timestamp": "fallback",
+                "ai_available": False
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка комплексного анализа: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ai-status")
+async def get_ai_status():
+    """
+    Получение статуса AI сервисов и статистики использования.
+    """
+    global ai_manager
+    
+    if not ai_manager:
+        return {
+            "status": "not_initialized",
+            "available_services": [],
+            "usage_stats": {}
+        }
+    
+    available_services = []
+    for provider in ai_manager.services.keys():
+        available_services.append(provider.value)
+    
+    usage_stats = ai_manager.get_all_usage_stats()
+    
+    return {
+        "status": "initialized" if available_services else "no_services",
+        "available_services": available_services,
+        "usage_stats": usage_stats,
+        "total_requests": sum(stats.get("request_count", 0) for stats in usage_stats.values()),
+        "total_tokens": sum(stats.get("total_tokens_used", 0) for stats in usage_stats.values())
+    }
 
 @app.get("/api/projects")
 async def get_projects():
@@ -331,9 +556,25 @@ async def health_check():
 # Инициализация при запуске
 @app.on_event("startup")
 async def startup_event():
+    global ai_manager
+    
+    # Инициализация базы данных
     init_database()
-    print("🚀 MCP Code Analyzer API запущен!")
+    
+    # Инициализация AI сервисов
+    try:
+        ai_manager = initialize_ai_services()
+        if ai_manager.services:
+            logger.info(f"🤖 AI сервисы инициализированы: {list(ai_manager.services.keys())}")
+        else:
+            logger.warning("⚠️ AI сервисы не настроены. Установите OPENAI_API_KEY или ANTHROPIC_API_KEY в переменных окружения.")
+    except Exception as e:
+        logger.error(f"❌ Ошибка инициализации AI сервисов: {str(e)}")
+        ai_manager = None
+    
+    print("🚀 MCP Code Analyzer API с AI интеграцией запущен!")
     print("📖 Документация: http://localhost:8000/docs")
+    print("🤖 AI статус: http://localhost:8000/api/ai-status")
 
 if __name__ == "__main__":
     uvicorn.run(
