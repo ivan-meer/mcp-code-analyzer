@@ -47,13 +47,8 @@ class CodeAnalyzerServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'code-analyzer',
-        version: '0.1.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
+        name: 'code-analyzer-server',
+        version: '1.0.0',
       }
     );
 

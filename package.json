@@ -2,7 +2,15 @@
   "name": "mcp-code-analyzer",
   "version": "0.1.0",
   "description": "AI-powered code analysis and visualization platform built with Model Context Protocol",
-  "keywords": ["mcp", "code-analysis", "ai", "visualization", "typescript", "react", "fastapi"],
+  "keywords": [
+    "mcp",
+    "code-analysis",
+    "ai",
+    "visualization",
+    "typescript",
+    "react",
+    "fastapi"
+  ],
   "homepage": "https://github.com/your-username/mcp-code-analyzer",
   "bugs": {
     "url": "https://github.com/your-username/mcp-code-analyzer/issues"
@@ -44,7 +52,7 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.0.0",
     "prettier": "^3.0.3",
-    "turbo": "latest",
+    "turbo": "^2.5.3",
     "typescript": "^5.0.0"
   },
   "engines": {
