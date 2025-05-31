@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FolderOpen, GitBranch, FileText, Code, Settings, Eye, FileJson, Globe, FileCode } from "lucide-react";
+import { FolderOpen, GitBranch, FileText, Code, Settings, Eye, FileJson, Globe, FileCode, HelpCircle } from "lucide-react";
 import { ProjectVisualization } from "@/components/visualization/project-visualization";
 
 const getFileIconColor = (type: string) => {
@@ -112,29 +112,29 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg">
-                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800/70">
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                     {analysisResult.metrics.total_files}
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Файлов</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-300">Файлов</div>
                 </div>
-                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800/70">
+                  <div className="text-2xl font-bold text-green-700 dark:text-green-300">
                     {analysisResult.metrics.total_lines.toLocaleString()}
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Строк кода</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-300">Строк кода</div>
                 </div>
-                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800/70">
+                  <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                     {analysisResult.metrics.total_functions}
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Функций</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-300">Функций</div>
                 </div>
-                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800">
-                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                <div className="text-center p-2 rounded-md bg-slate-50 dark:bg-slate-800/70">
+                  <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
                     {Math.round(analysisResult.metrics.avg_lines_per_file)}
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Строк/файл</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-300">Строк/файл</div>
                 </div>
               </div>
 
@@ -170,10 +170,34 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
           {/* Tabs for different views */}
           <Tabs defaultValue="visualization" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="visualization">Визуализация</TabsTrigger>
-              <TabsTrigger value="files">Файлы</TabsTrigger>
-              <TabsTrigger value="dependencies">Зависимости</TabsTrigger>
-              <TabsTrigger value="todos">TODO/FIXME</TabsTrigger>
+              <TabsTrigger value="visualization" className="relative group">
+                Визуализация
+                <HelpCircle className="h-3 w-3 ml-1 text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300" />
+                <div className="absolute hidden group-hover:block top-0 left-full ml-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg z-10 w-48">
+                  Графическая визуализация структуры проекта и связей между файлами.
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="files" className="relative group">
+                Файлы
+                <HelpCircle className="h-3 w-3 ml-1 text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300" />
+                <div className="absolute hidden group-hover:block top-0 left-full ml-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg z-10 w-48">
+                  Список всех файлов проекта с информацией о типе и размере.
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="dependencies" className="relative group">
+                Зависимости
+                <HelpCircle className="h-3 w-3 ml-1 text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300" />
+                <div className="absolute hidden group-hover:block top-0 left-full ml-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg z-10 w-48">
+                  Список зависимостей между файлами и модулями проекта.
+                </div>
+              </TabsTrigger>
+              <TabsTrigger value="todos" className="relative group">
+                TODO/FIXME
+                <HelpCircle className="h-3 w-3 ml-1 text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300" />
+                <div className="absolute hidden group-hover:block top-0 left-full ml-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg z-10 w-48">
+                  Задачи и исправления, найденные в коде проекта.
+                </div>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="visualization" className="space-y-4">
@@ -203,8 +227,8 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
                             {getFileIcon(file.type, file.name)}
                           </div>
                           <div>
-                            <div className="font-medium text-slate-800 dark:text-slate-200">{file.name}</div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">{file.name}</div>
+                            <div className="text-sm text-slate-700 dark:text-slate-300">
                               {file.path}
                             </div>
                           </div>
