@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Banner](assets/mcp-code-analyzer-banner.jpg)
+![Banner](assets/thumbnail.jpg)
 
 <!-- Навигация по языкам -->
 <p align="center">
