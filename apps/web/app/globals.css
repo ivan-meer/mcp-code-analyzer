@@ -49,9 +49,35 @@
 
 /* Dark theme adjustments */
 .dark {
-  --glass-bg: rgba(15, 23, 42, 0.8);
-  --glass-border: rgba(148, 163, 184, 0.1);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(15, 23, 42, 0.9);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --background: 220 25% 8%; /* Very Dark Gray-Blue */
+  --foreground: 210 40% 98%; /* Almost White */
+  --card: 220 20% 12%; /* Dark Gray-Blue (lighter than background) */
+  --card-foreground: 210 40% 98%; /* Almost White */
+  --popover: 220 20% 13%; /* Dark Gray-Blue (similar to card) */
+  --popover-foreground: 210 40% 98%; /* Almost White */
+  --primary: 215 85% 70%; /* Brighter, Vibrant Blue */
+  --primary-foreground: 210 40% 98%; /* Almost White */
+  --secondary: 220 15% 20%; /* Dark Gray-Blue */
+  --secondary-foreground: 210 40% 98%; /* Almost White */
+  --muted: 220 15% 20%; /* Dark Gray-Blue */
+  --muted-foreground: 210 15% 60%; /* Medium Light Gray */
+  --accent: 220 15% 25%; /* Slightly Lighter Dark Gray-Blue */
+  --accent-foreground: 210 40% 98%; /* Almost White */
+  --destructive: 0 70% 50%; /* Brighter Red */
+  --destructive-foreground: 210 40% 98%; /* Almost White */
+  --border: 220 15% 22%; /* Dark Gray-Blue */
+  --input: 220 20% 12%; /* Dark Gray-Blue */
+  --ring: 215 85% 75%; /* Brighter Shade of Primary Blue */
+  --graph-node-core: #a855f7; /* Slightly lighter purple */
+  --graph-node-component: #22d3ee; /* Slightly lighter cyan */
+  --graph-node-utility: #34d399; /* Slightly lighter green */
+  --graph-node-config: #fbbf24; /* Slightly lighter orange */
+  --graph-link-import: #c4b5fd; /* Lighter violet */
+  --graph-link-export: #67e8f9; /* Lighter cyan */
+  --graph-link-dependency: #94a3b8; /* Lighter gray */
 }
 
 /* Custom gradient backgrounds */
