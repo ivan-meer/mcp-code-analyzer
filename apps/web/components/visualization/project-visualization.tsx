@@ -279,10 +279,64 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .data(links)
       .join('line')
       .attr('stroke', 'url(#linkGradient)')
-      .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', d => Math.sqrt((d.weight || 1) * 2))
+      .attr('stroke-opacity', 0.8) // Увеличена видимость связей
+      .attr('stroke-width', d => Math.sqrt((d.weight || 1) * 3)) // Увеличена толщина линий
       .attr('marker-end', 'url(#arrowhead)')
-      .style('cursor', 'pointer');
+      .style('cursor', 'pointer')
+      .on('mouseover', function(event, d) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('stroke-opacity', 1)
+          .attr('stroke-width', Math.sqrt((d.weight || 1) * 3) + 2);
+        
+        // Highlight connected nodes
+        nodeElements
+          .transition()
+          .duration(200)
+          .attr('opacity', n => 
+            (n.id === (d.source as Node).id || n.id === (d.target as Node).id) ? 1 : 0.3
+          );
+        
+        // Show tooltip with link type
+        const tooltip = visualizationGroup.append('g')
+          .attr('class', 'tooltip')
+          .attr('transform', `translate(${(event.pageX)}, ${(event.pageY - 10)})`);
+          
+        const tooltipRect = tooltip.append('rect')
+          .attr('fill', 'rgba(0, 0, 0, 0.9)')
+          .attr('stroke', '#06b6d4')
+          .attr('stroke-width', 1)
+          .attr('rx', 6);
+          
+        const tooltipText = tooltip.append('text')
+          .attr('fill', 'white')
+          .attr('font-size', '12px')
+          .attr('x', 8)
+          .attr('y', 16)
+          .text(`Связь: ${d.type}`);
+          
+        const bbox = tooltipText.node()?.getBBox();
+        if (bbox) {
+          tooltipRect
+            .attr('width', bbox.width + 16)
+            .attr('height', bbox.height + 12);
+        }
+      })
+      .on('mouseout', function(event, d) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('stroke-opacity', 0.8)
+          .attr('stroke-width', Math.sqrt((d.weight || 1) * 3));
+        
+        nodeElements
+          .transition()
+          .duration(200)
+          .attr('opacity', 1);
+          
+        visualizationGroup.selectAll('.tooltip').remove();
+      });
 
     // Add arrowheads for directed relationships
     defs.append('marker')
