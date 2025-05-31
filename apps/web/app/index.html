@@ -3,672 +3,785 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Code Analyzer - Анализ проекта</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/material-darker.min.css">
+    <title>MCP Code Analyzer - Полная версия</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs/loader.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #1e1e1e;
-            --bg-secondary: #252526;
-            --bg-tertiary: #2d2d2d;
-            --text-primary: #d4d4d4;
-            --text-secondary: #a0a0a0;
-            --accent-primary: #007acc;
-            --accent-secondary: #00aaff;
-            --border-color: #333333;
-            --font-family: 'Roboto', sans-serif;
-            --error-color: #f44747;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* :root {
+            --primary-color: #8A2BE2; /* Фиолетовый */
+            /* --secondary-color: #4B0082; /* Индиго */
+            /* --accent-color: #FF00FF; /* Маджента */
+            /* --background-color: #1E1E1E; /* Темный фон */
+            /* --glass-bg: rgba(46, 26, 71, 0.6); /* Фиолетовое стекло */
+            /* --text-color: #E0E0E0; */
+            /* --text-secondary-color: #B0B0B0; */
+            /* --border-color: rgba(255, 255, 255, 0.2); */
+            /* --card-bg: rgba(30, 30, 30, 0.7); */
+            /* --font-family: 'Inter', sans-serif; */
+        /* } */
 
         body {
-            font-family: var(--font-family);
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            min-height: 100vh;
             overflow: hidden;
         }
 
-        .main-header {
-            background-color: var(--bg-secondary);
-            padding: 0 15px;
+        /* Main Layout Placeholder (adapting .app-container for now) */
+        .app-container { /* Will be renamed to .main-layout in HTML later */
+            display: grid;
+            grid-template-columns: 320px 1fr 380px; /* Сайдбар | Центральная область | Правая панель */
+            grid-template-rows: 60px 1fr; /* Хедер | Контент */
+            grid-template-areas:
+                "header header header"
+                "sidebar main-content right-panel";
+            height: calc(100vh - 0px); /* Assuming header is part of this grid for now, will adjust if header is outside */
+            gap: 1px; /* Target gap */
+            /* padding: 10px; */ /* Target does not specify padding for main-layout itself, but for its children */
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05); /* Target background */
+        }
+
+        .app-header {
+            /* grid-area: header; */ /* Removed as per target, assuming it's a direct child of body or another container */
+            height: 60px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 50px;
-            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            position: relative; /* For z-index to take effect if needed */
+            /* Removed border, border-radius, box-shadow from previous style */
         }
 
-        .logo {
-            font-size: 1.5em;
-            font-weight: 700;
-            color: var(--accent-secondary);
-        }
-        .logo .fa-microchip {
-            margin-right: 8px;
+        .app-header h1 { /* This might be replaced by .app-title later */
+            margin: 0;
+            font-size: 1.8em; /* Will be overridden by .app-title if HTML changes */
+            font-weight: 600;
+            letter-spacing: 1px;
         }
 
-        .project-url-input {
-            flex-grow: 1;
-            margin: 0 20px;
+        .user-profile { display: flex; align-items: center; }
+        .user-profile img { width: 35px; height: 35px; border-radius: 50%; margin-right: 10px; border: 2px solid #feca57; /* Target accent */ }
+
+        /* General Panel Styling (adapting existing specific panel classes) */
+        .sidebar, .main-content, .right-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; /* Target border-radius */
+            display: flex; /* Target display */
+            flex-direction: column; /* Target direction */
+            overflow: hidden; /* Target overflow */
+            /* Removing individual box-shadows, background var usages */
         }
-        .project-url-input input {
+
+        .sidebar {
+            grid-area: sidebar;
+            padding: 20px; /* Existing padding */
+            /* overflow-y: auto; */ /* Already part of .panel-content or handled by specific content */
+        }
+
+        .main-content {
+            grid-area: main-content;
+            padding: 0; /* No padding for editor container itself */
+        }
+
+        #editor-container { /* Specific to current HTML for Monaco */
             width: 100%;
-            padding: 8px 12px;
-            background-color: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 4px;
-        }
-
-        .analyze-button {
-            background-color: var(--accent-primary);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        .analyze-button:hover {
-            background-color: var(--accent-secondary);
-        }
-        .analyze-button .fa-play {
-            margin-right: 5px;
-        }
-
-        .main-container {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden; /* Important for child panel scrolling */
-        }
-
-        .panel {
-            padding: 10px;
-            background-color: var(--bg-secondary);
-            overflow-y: auto; /* Enable vertical scrolling for panels */
-            height: calc(100vh - 50px); /* Full height minus header */
-        }
-        .panel h3 {
-            font-size: 1.1em;
-            font-weight: 500;
-            margin-bottom: 10px;
-            color: var(--accent-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-        }
-
-        .left-panel {
-            width: 280px;
-            border-right: 1px solid var(--border-color);
-        }
-
-        .stats-section .stat-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9em;
-            padding: 6px 0;
-        }
-        .stats-section .stat-item .label { color: var(--text-secondary); }
-        .stats-section .stat-item .value { font-weight: 500; }
-
-        .tech-stack-list {
-            list-style: none;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 5px;
-        }
-        .tech-stack-list li {
-            background-color: var(--bg-tertiary);
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 0.85em;
-        }
-
-        .file-tree ul {
-            list-style: none;
-            padding-left: 15px;
-        }
-        .file-tree li {
-            padding: 4px 0;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-        .file-tree .folder > span::before {
-            font-family: "Font Awesome 6 Free";
-            content: "\f07b"; /* fa-folder */
-            font-weight: 900;
-            margin-right: 8px;
-            color: var(--accent-primary);
-        }
-        .file-tree .file > span::before {
-            font-family: "Font Awesome 6 Free";
-            content: "\f15b"; /* fa-file */
-            font-weight: 400;
-            margin-right: 8px;
-            color: var(--text-secondary);
-        }
-        .file-tree .folder.open > span::before {
-            content: "\f07c"; /* fa-folder-open */
-        }
-        .file-tree li:hover {
-            color: var(--accent-secondary);
-        }
-        .file-tree ul { display: none; } /* Initially hidden */
-        .file-tree .open > ul { display: block; } /* Show for open folders */
-
-
-        .center-panel {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid var(--border-color);
-        }
-        .tabs {
-            display: flex;
-            background-color: var(--bg-primary); /* Slightly different from panel for visual separation */
-            border-bottom: 1px solid var(--border-color);
-        }
-        .tab-button {
-            padding: 10px 15px;
-            cursor: pointer;
-            border: none;
-            background-color: transparent;
-            color: var(--text-secondary);
-            font-weight: 500;
-            transition: color 0.2s, border-bottom 0.2s;
-            border-bottom: 2px solid transparent; /* For active state */
-        }
-        .tab-button.active {
-            color: var(--accent-secondary);
-            border-bottom: 2px solid var(--accent-secondary);
-        }
-        .tab-button:hover {
-            color: var(--text-primary);
-        }
-        .tab-button .fa { margin-right: 6px; }
-
-        .tab-content {
-            flex-grow: 1;
-            overflow-y: auto; /* Allow content within tab to scroll if needed */
-            /* padding: 15px; */ /* Padding might be added per-pane if needed */
-        }
-        .tab-pane { display: none; height: 100%; }
-        .tab-pane.active { display: block; }
-
-        .code-editor-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 15px;
-            background-color: var(--bg-tertiary);
-            font-size: 0.9em;
-            border-bottom: 1px solid var(--border-color);
-        }
-        #current-file-path { color: var(--text-primary); }
-        .code-editor-actions button {
-            background: none;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 5px 10px;
-            margin-left: 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-        .code-editor-actions button:hover {
-            background-color: var(--accent-primary);
-            color: white;
-            border-color: var(--accent-primary);
-        }
-
-        #code-content {
-            height: calc(100% - 38px); /* Adjust based on header height */
-        }
-        .CodeMirror {
             height: 100%;
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 0.95em;
+            border-radius: 0 0 12px 12px;
         }
-        .CodeMirror-gutters { background-color: var(--bg-secondary) !important; border-right: 1px solid var(--border-color) !important; }
-        .CodeMirror-linenumber { color: var(--text-secondary) !important; }
-        .CodeMirror-cursor { border-left: 1px solid var(--text-primary) !important; }
-        .cm-s-material-darker.CodeMirror { background-color: var(--bg-secondary); color: #EEFFFFEE;}
-        .cm-s-material-darker .CodeMirror-gutters { background: var(--bg-secondary); border-right: 1px solid var(--border-color); }
-        .cm-s-material-darker .CodeMirror-linenumber { color: #6b6b6b; }
-        .cm-s-material-darker .CodeMirror-cursor { border-left: 1px solid #f8f8f0; }
-        /* Add more specific theme overrides if needed */
 
-
-        /* Placeholder styles for graph and metrics */
-        #graph-pane, #metrics-pane {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            height: 100%;
-            color: var(--text-secondary);
+        /* Adapting .main-content-header to .panel-header styles */
+        .main-content-header {
+            padding: 15px 20px; /* Target padding */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Target border */
+            background: rgba(0, 0, 0, 0.2); /* Target background */
+            display: flex; /* Target display */
+            align-items: center; /* Target align */
+            justify-content: space-between; /* Target justify */
+            border-radius: 12px 12px 0 0; /* Keep for now, might be removed if .panel takes over all rounding */
         }
-         /* Styles for the actual D3 graph (from simple_graph_integration.html) should be merged here or in a separate CSS */
-        .knowledge-graph-placeholder { /* For initial placeholder before graph is loaded */
-            padding: 40px; text-align: center; opacity: 0.7;
-        }
+         .main-content-header h2 { margin: 0; font-size: 1rem; font-weight: 600; } /* Target panel-title font */
 
 
         .right-panel {
-            width: 320px;
-            border-left: 1px solid var(--border-color);
+            grid-area: right-panel;
+            padding: 20px; /* Existing padding */
+            /* overflow-y: auto; */
         }
-        .analysis-item, .insight-item {
-            background-color: var(--bg-tertiary);
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            border: 1px solid var(--border-color);
-        }
-        .analysis-item strong, .insight-item strong {
-            display: block;
-            margin-bottom: 4px;
-            color: var(--text-primary);
-        }
-        .analysis-item p, .insight-item p {
-            font-size: 0.95em;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-        .insight-item .fa-lightbulb { color: #f0ad4e; margin-right: 5px; } /* Example: yellow for insights */
 
-        /* Loading overlay */
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* Generic .panel class for future use if HTML is refactored */
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; flex-direction: column; overflow: hidden;
+            border-radius: 12px; /* Default radius for a generic panel */
+        }
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-title { /* Applied to h3 within .panel-section for now, or dedicated span later */
+            font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px;
+        }
+        .panel-content {
+            flex: 1; overflow-y: auto; padding: 20px;
+        }
+
+
+        .panel-section { margin-bottom: 25px; }
+        /* Applying .panel-title styles to existing .panel-section h3 */
+        .panel-section h3 {
+            font-size: 1rem; /* Target panel-title font-size */
+            font-weight: 600; /* Target panel-title font-weight */
+            color: #feca57; /* Target accent for titles */
+            margin-top: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Target border */
+            padding-bottom: 8px;
+            display: flex; align-items: center; gap: 8px; /* Target display */
+        }
+
+        /* File tree styling: current and target mixed/overridden */
+        .file-tree { /* This is the container div in current HTML */
+            flex: 1; /* Target for .file-tree if it's a flex child */
+        }
+        .file-tree ul, #dependencies-list ul, #complexity-report ul, #git-status ul {
+            list-style-type: none;
+            padding-left: 0; /* Target: tree-item will handle padding */
+        }
+        /* Styling for individual items, to be replaced by .tree-item */
+        .file-tree li, #dependencies-list li, #complexity-report li, #git-status li {
+            /* padding: 8px 5px; */ /* Replaced by .tree-item */
+            /* cursor: pointer; */ /* Replaced by .tree-item */
+            /* border-radius: 6px; */ /* Replaced by .tree-item */
+            /* transition: background-color 0.2s ease; */ /* Replaced by .tree-item */
+            /* font-size: 0.95em; */ /* Replaced by .tree-item */
+        }
+        .file-tree li:hover, #dependencies-list li:hover, #complexity-report li:hover, #git-status li:hover {
+            /* background-color: rgba(255, 255, 255, 0.1); */ /* Replaced by .tree-item:hover */
+        }
+        /* Old .file-tree .folder/.file specific styles, will be replaced by .tree-item.folder/file and .file-icon */
+        .file-tree .folder {
+            /* font-weight: bold; color: var(--accent-color); */
+        }
+        .file-tree .file::before { /* content: '📄 '; */ }
+        .file-tree .folder::before { /* content: '📁 '; */ }
+
+
+        /* Target Knowledge Graph Container Style */
+        #knowledge-graph-container { /* Current ID, apply target styles */
+            position: relative; /* Target */
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            color: white;
-        }
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid white;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        #loading-message { margin-top: 15px; font-size: 1.1em; }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            height: 300px; /* Adjust as needed, or make it 100% if in a .view-pane */
+            /* border: 1px solid rgba(255, 255, 255, 0.1); */ /* Target border */
+            /* border-radius: 8px; */ /* Target radius */
+            background: radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 50%); /* Target background */
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 1024px) {
-            .left-panel, .right-panel { width: 250px; }
-            .project-url-input { margin: 0 10px; }
+        /* Target D3 node/link base styles (some were already present) */
+        .node { /* D3 related */
+            cursor: pointer;
+            stroke-width: 2px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            transition: all 0.3s ease;
+            /* stroke: #feca57; */ /* Target accent for nodes, if not set by JS */
         }
-        @media (max-width: 768px) {
-            .main-container { flex-direction: column; }
-            .panel { height: auto; max-height: 50vh; /* Allow scrolling within panels on small screens */ }
-            .left-panel, .right-panel, .center-panel { width: 100%; border: 0; }
-            .left-panel { border-bottom: 1px solid var(--border-color); }
-            .center-panel { border-bottom: 1px solid var(--border-color); }
-            .main-header { flex-wrap: wrap; height: auto; padding: 10px; }
-            .project-url-input { width: 100%; margin: 10px 0; order: 3; }
-            .analyze-button { width: 100%; order: 4; }
-            .logo { width: 100%; text-align: center; margin-bottom: 10px; order: 1; }
-             .tabs { flex-wrap: wrap; }
-            .tab-button { font-size: 0.9em; padding: 8px 10px;}
+        .node:hover {
+            stroke-width: 3px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
         }
+        .node circle { /* D3 related */
+            /* fill: var(--primary-color); */ /* Will be set by JS or more specific rules */
+        }
+        .node text { /* D3 related */
+             /* fill: var(--text-secondary-color); */ /* Replaced by .node-label */
+             /* font-size: 10px; */
+             /* pointer-events: none; */
+        }
+        .link { /* D3 related */
+            stroke: rgba(255,255,255,0.6); /* Target stroke */
+            stroke-opacity: 1; /* Target opacity (was 0.6) */
+            stroke-width: 1.5px; /* Target stroke-width */
+            fill: none; /* Target fill */
+            transition: all 0.3s ease; /* Target transition */
+        }
+
+        .search-bar { /* Assuming this is for file tree search */
+            width: calc(100% - 22px); /* Account for padding of parent if any, and its own padding + border */
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.05); /* Target background */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Target border */
+            border-radius: 6px;
+            color: white; /* Target text color */
+            font-size: 0.9rem; /* Target font size */
+        }
+        .search-bar::placeholder { color: rgba(255, 255, 255, 0.5); } /* Target placeholder */
+
+        /* Styling for current .tabs button, will be replaced by .view-tabs and .view-tab */
+        .tabs { /* This is the container for current tab buttons */
+            display: flex;
+            /* background: rgba(0, 0, 0, 0.3); */ /* Target style, if these tabs become .view-tabs */
+            /* border-bottom: 1px solid rgba(255, 255, 255, 0.1); */ /* Target style */
+        }
+        .tabs button { /* Current tab buttons */
+            /* background-color: transparent; */
+            /* color: var(--text-secondary-color); */
+            /* border: none; */
+            /* padding: 10px 15px; */ /* Replaced by .view-tab */
+            /* cursor: pointer; */
+            /* font-size: 1em; */ /* Replaced by .view-tab */
+            /* border-bottom: 2px solid transparent; */ /* Replaced by .view-tab */
+            /* transition: color 0.3s ease, border-bottom-color 0.3s ease; */ /* Replaced by .view-tab */
+        }
+        .tabs button.active {
+            /* color: var(--accent-color); */ /* Replaced by .view-tab.active */
+            /* border-bottom-color: var(--accent-color); */ /* Replaced by .view-tab.active */
+            /* font-weight: bold; */
+        }
+        .tab-content { display: none; padding-top: 15px; } /* Current, may be replaced by .view-pane */
+        .tab-content.active { display: block; } /* Current, may be replaced by .view-pane.active */
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2); /* Adjusted border color */
+            border-top: 4px solid #feca57; /* Target accent */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* NEW Target CSS classes from prompt */
+
+        .app-title { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 600; }
+        .app-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #ff6b6b, #feca57); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .header-actions { display: flex; gap: 10px; }
+        .header-btn { padding: 8px 16px; background: rgba(255, 255, 255, 0.2); border: none; border-radius: 6px; color: white; cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; }
+        .header-btn:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+        .header-btn.primary { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+        .project-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .stat-card { background: rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 16px; text-align: center; transition: all 0.3s ease; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .stat-card:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.15); }
+        .stat-value { font-size: 1.8rem; font-weight: bold; color: #feca57; margin-bottom: 4px; }
+        .stat-label { font-size: 0.8rem; opacity: 0.8; }
+        .tech-stack { margin-bottom: 25px; }
+        .tech-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .tech-badge { background: rgba(255, 255, 255, 0.2); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        /* Target .file-tree combined with .tree-item */
+        /* .file-tree is already defined for the container */
+        .tree-item { padding: 6px 12px; margin: 2px 0; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        .tree-item:hover { background: rgba(255, 255, 255, 0.1); }
+        .tree-item.active { background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3)); border: 1px solid rgba(102, 126, 234, 0.5); }
+        .tree-item.folder { font-weight: 500; }
+        .tree-item.file { padding-left: 24px; opacity: 0.9; } /* Original .file-tree .file had ::before content */
+        .file-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+
+        .view-tabs { display: flex; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .view-tab { padding: 12px 20px; cursor: pointer; transition: all 0.3s ease; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+        .view-tab:hover { background: rgba(255, 255, 255, 0.1); }
+        .view-tab.active { background: rgba(255, 255, 255, 0.1); border-bottom-color: #667eea; color: #feca57; }
+        /* This assumes .main-content is the parent for these panes */
+        .view-content { position: relative; /* Changed from absolute for flow within .main-content */ flex: 1; overflow: hidden; }
+        .view-pane { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; background: transparent; /* Ensure panes don't obscure each other with solid bg unless active */ }
+        .view-pane.active { opacity: 1; pointer-events: all; }
+
+        /* Styles for the simple text editor (not Monaco) */
+        .code-editor { height: 100%; display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.4); }
+        .editor-toolbar { padding: 12px 20px; background: rgba(0, 0, 0, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; }
+        .file-path { font-family: 'Courier New', monospace; font-size: 0.85rem; opacity: 0.8; color: #feca57; }
+        .editor-actions { display: flex; gap: 8px; }
+        .editor-btn { padding: 6px 12px; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem; transition: all 0.3s ease; }
+        .editor-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .code-content { flex: 1; padding: 20px; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; overflow-y: auto; white-space: pre-wrap; color: #e8e8e8; }
+
+        /* Graph Components */
+        .graph-container { position: relative; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 50%); }
+        /* #knowledge-graph-container is already styled similarly to .graph-container */
+        .graph-controls { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; flex-direction: column; gap: 10px; max-width: 250px; }
+        .control-group { background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 8px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .control-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; color: #feca57; }
+        .filter-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        .filter-btn { padding: 4px 8px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.7rem; cursor: pointer; transition: all 0.3s ease; }
+        .filter-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .filter-btn.active { background: #667eea; border-color: #667eea; }
+        .graph-svg { width: 100%; height: 100%; cursor: grab; }
+        .graph-svg:active { cursor: grabbing; }
+        /* .node and .link styles already adapted/added above */
+        .node-label { font-size: 10px; fill: white; text-anchor: middle; pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+
+
+        /* Right Panel Components */
+        .connection-item { background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 10px; border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .connection-item:hover { transform: translateX(5px); background: rgba(255, 255, 255, 0.15); }
+        .connection-type { font-size: 0.75rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; color: #feca57; }
+        .connection-files { margin: 6px 0; font-weight: 500; font-size: 0.85rem; }
+        .connection-strength { font-size: 0.75rem; color: #4ecdc4; }
+        .insight-item { background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(254,202,87,0.2)); border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 3px solid #ff6b6b; border: 1px solid rgba(255,107,107,0.3); }
+        .insight-type { font-size: 0.75rem; font-weight: 600; color: #ff6b6b; margin-bottom: 5px; text-transform: uppercase; }
+        .insight-text { font-size: 0.85rem; line-height: 1.4; }
+
+        /* Tooltip */
+        .tooltip { position: absolute; background: rgba(0,0,0,0.95); color: white; padding: 10px 12px; border-radius: 6px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.2); pointer-events: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }
+        .tooltip.visible { opacity: 1; transform: translateY(0); }
+
+        /* Custom scrollbar for webkit browsers - TARGET STYLES */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); } /* Target hover */
 
     </style>
 </head>
 <body>
-    <header class="main-header">
-        <div class="logo"><i class="fas fa-microchip"></i> MCP Analyzer</div>
-        <div class="project-url-input">
-            <input type="text" id="repo-url-input" placeholder="Введите URL Git репозитория...">
-        </div>
-        <button class="analyze-button" id="analyze-repo-button"><i class="fas fa-play"></i> Анализировать</button>
-    </header>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>MCP Code Analyzer</h1>
+            <div class="user-profile">
+                <span id="userName">Аналитик_01</span>
+                <img src="https://placekitten.com/50/50" alt="User Avatar">
+            </div>
+        </header>
 
-    <div class="main-container">
-        <aside class="panel left-panel">
-            <section class="stats-section">
-                <h3><i class="fas fa-chart-simple"></i> Статистика</h3>
-                <div class="stat-item">
-                    <span class="label">Проект:</span>
-                    <span class="value" id="project-name">-</span>
+        <aside class="sidebar">
+            <input type="text" id="fileSearch" class="search-bar" placeholder="Поиск файлов...">
+            <div class="panel-section">
+                <h3>Проводник проекта</h3>
+                <div id="fileTree" class="file-tree">
+                    <!-- Динамически загружаемый контент -->
+                    <div class="loader" id="fileTreeLoader"></div>
                 </div>
-                <div class="stat-item">
-                    <span class="label">Всего файлов:</span>
-                    <span class="value" id="total-files">-</span>
+            </div>
+            <div class="panel-section">
+                <h3>Контроль версий (Git)</h3>
+                <div id="git-status">
+                     <p>Ветка: <span id="currentBranch" style="color: var(--accent-color);">main</span></p>
+                     <ul id="changedFilesList"><li>Нет изменений</li></ul>
                 </div>
-                <div class="stat-item">
-                    <span class="label">Строк кода:</span>
-                    <span class="value" id="total-loc">-</span>
-                </div>
-                <div class="stat-item">
-                    <span class="label">Функций:</span>
-                    <span class="value" id="total-functions">-</span>
-                </div>
-                 <div class="stat-item">
-                    <span class="label">Классов:</span>
-                    <span class="value" id="total-classes">-</span>
-                </div>
-                <div class="stat-item">
-                    <span class="label">Комментариев:</span>
-                    <span class="value" id="total-comments">-</span>
-                </div>
-                 <div class="stat-item">
-                    <span class="label">Размер проекта:</span>
-                    <span class="value" id="project-size">-</span>
-                </div>
-                <h4 style="font-size: 0.95em; margin-top: 10px; margin-bottom: 5px; color: var(--text-secondary);">Технологии:</h4>
-                <ul class="tech-stack-list" id="tech-stack">
-                    <!-- <li>Python</li> <li>JavaScript</li> <li>Docker</li> -->
-                </ul>
-            </section>
-            <section class="file-tree-section" style="margin-top: 15px;">
-                <h3><i class="fas fa-folder-tree"></i> Структура проекта</h3>
-                <div class="file-tree" id="file-tree-container">
-                    <!-- File tree will be populated here -->
-                     <ul id="file-tree-root">
-                        <li class="folder" data-path="apps">
-                            <span>apps</span>
-                            <ul>
-                                <li class="folder" data-path="apps/api">
-                                    <span>api</span>
-                                    <ul>
-                                        <li class="file" data-path="apps/api/main.py"><span>main.py</span></li>
-                                        <li class="file" data-path="apps/api/models.py"><span>models.py</span></li>
-                                    </ul>
-                                </li>
-                                <li class="folder" data-path="apps/web">
-                                    <span>web</span>
-                                    <ul>
-                                        <li class="file" data-path="apps/web/app/page.tsx"><span>page.tsx</span></li>
-                                        <li class="file" data-path="apps/web/app/layout.tsx"><span>layout.tsx</span></li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="file" data-path="README.md"><span>README.md</span></li>
-                    </ul>
-                </div>
-            </section>
+            </div>
         </aside>
 
-        <main class="panel center-panel">
-            <div class="tabs">
-                <button class="tab-button active" onclick="switchTab(event, 'code-editor-pane')"><i class="fas fa-code"></i> Редактор кода</button>
-                <button class="tab-button" onclick="switchTab(event, 'graph-pane')"><i class="fas fa-project-diagram"></i> Граф знаний</button>
-                <button class="tab-button" onclick="switchTab(event, 'metrics-pane')"><i class="fas fa-tachometer-alt"></i> Метрики</button>
-                 <button class="tab-button" onclick="switchTab(event, 'dependencies-pane')"><i class="fas fa-sitemap"></i> Зависимости</button>
-                <button class="tab-button" onclick="switchTab(event, 'security-pane')"><i class="fas fa-shield-alt"></i> Безопасность</button>
-
+        <main class="main-content">
+            <div class="main-content-header">
+                 <h2 id="currentOpenFileName">Обзор проекта</h2>
             </div>
-            <div class="tab-content">
-                <div class="tab-pane active" id="code-editor-pane">
-                    <div class="code-editor-header">
-                        <span id="current-file-path">Выберите файл для отображения...</span>
-                        <div>
-                            <button id="ai-analyze-code"><i class="fas fa-wand-magic-sparkles"></i> AI Анализ</button>
-                            <button id="copy-code-button"><i class="fas fa-copy"></i> Копировать</button>
-                        </div>
-                    </div>
-                    <div id="code-content"></div> <!-- CodeMirror will attach here -->
-                </div>
-                <div class="tab-pane" id="graph-pane">
-                     <div class="knowledge-graph-placeholder">
-                        <h3><i class="fas fa-atom"></i> Визуализация графа знаний</h3>
-                        <p>Компонент графа будет отображен здесь после анализа проекта.</p>
-                        <!-- D3.js graph from simple_graph_integration.html will be integrated here -->
-                    </div>
-                </div>
-                <div class="tab-pane" id="metrics-pane">
-                    <div style="padding: 40px; text-align: center; opacity: 0.7;">
-                        <h3><i class="fas fa-chart-line"></i> Метрики и Качество Кода</h3>
-                        <p>Раздел в разработке. Здесь будут отображаться ключевые метрики кода и отчеты по качеству.</p>
-                    </div>
-                </div>
-                 <div class="tab-pane" id="dependencies-pane">
-                    <div style="padding: 40px; text-align: center; opacity: 0.7;">
-                        <h3><i class="fas fa-cogs"></i> Управление Зависимостями</h3>
-                        <p>Раздел в разработке. Анализ и визуализация зависимостей проекта.</p>
-                    </div>
-                </div>
-                <div class="tab-pane" id="security-pane">
-                    <div style="padding: 40px; text-align: center; opacity: 0.7;">
-                        <h3><i class="fas fa-user-shield"></i> Анализ Безопасности</h3>
-                        <p>Раздел в разработке. Отчеты по уязвимостям и проверкам безопасности.</p>
-                    </div>
-                </div>
+            <div id="editor-container">
+                <!-- Monaco Editor будет здесь -->
+                 <div style="padding:20px; color: var(--text-secondary-color);">Выберите файл для просмотра или анализа.</div>
             </div>
         </main>
 
-        <aside class="panel right-panel">
-            <section class="connections-analysis">
-                <h3><i class="fas fa-link"></i> Анализ связей</h3>
-                <div id="connections-list">
-                    <div class="analysis-item">
-                        <strong>Функция `getUserData` (main.py)</strong>
-                        <p>Вызывается в: `api/routes.py` (строка 45)</p>
-                        <p>Использует: Модель `User` (models.py)</p>
-                    </div>
-                    <div class="analysis-item">
-                        <strong>Класс `OrderProcessor` (services.py)</strong>
-                        <p>Зависит от: `PaymentGateway` (utils.py)</p>
-                        <p>Наследники: `PremiumOrderProcessor`</p>
-                    </div>
+        <aside class="right-panel">
+            <div class="tabs">
+                <button class="tab-button active" onclick="openTab(event, 'analysisTab')">Анализ</button>
+                <button class="tab-button" onclick="openTab(event, 'graphTab')">Граф</button>
+                <button class="tab-button" onclick="openTab(event, 'refactorTab')">Рефакторинг</button>
+            </div>
+
+            <div id="analysisTab" class="tab-content active">
+                <div class="panel-section">
+                    <h3>Ключевые метрики</h3>
+                    <ul id="codeMetrics">
+                        <li>Строк кода: <span id="metricLines">N/A</span></li>
+                        <li>Сложность: <span id="metricComplexity">N/A</span></li>
+                        <li>Дублирование: <span id="metricDuplication">N/A</span>%</li>
+                        <li>Комментарии: <span id="metricComments">N/A</span>%</li>
+                    </ul>
                 </div>
-            </section>
-            <section class="ai-insights" style="margin-top: 15px;">
-                <h3><i class="fas fa-lightbulb"></i> AI Инсайты</h3>
-                <div id="ai-insights-list">
-                    <div class="insight-item">
-                        <p><i class="fas fa-lightbulb"></i> Рекомендуется рефакторинг функции `calculate_totals` - высокая цикломатическая сложность (15).</p>
-                    </div>
-                    <div class="insight-item">
-                        <p><i class="fas fa-lightbulb"></i> Обнаружен потенциальный N+1 запрос в `get_user_posts`.</p>
-                    </div>
+                <div class="panel-section">
+                    <h3>Обнаруженные проблемы</h3>
+                    <ul id="issuesList">
+                        <li>Нет данных для отображения.</li>
+                    </ul>
                 </div>
-            </section>
+            </div>
+
+            <div id="graphTab" class="tab-content">
+                <div class="panel-section">
+                    <h3>Интерактивный граф знаний</h3>
+                    <div id="knowledge-graph-container">
+                        <!-- D3.js граф будет здесь -->
+                    </div>
+                    <p style="font-size: 0.8em; text-align: center; color: var(--text-secondary-color);">Визуализация связей между компонентами проекта.</p>
+                </div>
+            </div>
+
+            <div id="refactorTab" class="tab-content">
+                <div class="panel-section">
+                    <h3>Предложения по рефакторингу</h3>
+                    <ul id="refactorSuggestionsList">
+                        <li>Автоматический анализ не выявил очевидных кандидатов для рефакторинга.</li>
+                    </ul>
+                </div>
+                 <div class="panel-section">
+                    <h3>Инструменты</h3>
+                    <button style="background-color: var(--primary-color); color: white; padding: 10px 15px; border:none; border-radius: 5px; cursor:pointer;" onclick="alert('Запуск автоматического рефакторинга (симуляция)...')">Авто-рефакторинг</button>
+                </div>
+            </div>
         </aside>
     </div>
 
-    <div id="loading-overlay" style="display: none;">
-        <div class="spinner"></div>
-        <p id="loading-message">Анализ репозитория...</p>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/python/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/clike/clike.min.js"></script> <!-- for Java, C++, C# -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script> <!-- for HTML -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/jsx/jsx.min.js"></script> <!-- for TSX/JSX -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closebrackets.min.js"></script>
-
     <script>
-        let codeEditor; // Will hold the CodeMirror instance
+        let monacoEditor;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize CodeMirror
-            codeEditor = CodeMirror(document.getElementById('code-content'), {
-                lineNumbers: true,
-                theme: 'material-darker',
-                readOnly: true, // Or false if editing is desired
-                matchBrackets: true,
-                autoCloseBrackets: true
-            });
-
-            // File tree interaction (basic example)
-            const fileTreeItems = document.querySelectorAll('.file-tree li > span');
-            fileTreeItems.forEach(item => {
-                item.addEventListener('click', (event) => {
-                    event.stopPropagation(); // Prevent event bubbling
-                    const parentLi = item.parentElement;
-                    if (parentLi.classList.contains('folder')) {
-                        parentLi.classList.toggle('open');
-                    } else if (parentLi.classList.contains('file')) {
-                        selectFile(parentLi.dataset.path);
-                    }
-                });
-            });
-
-            // Initial active tab setup (if not handled by HTML classes)
-            // switchTab(null, 'code-editor-pane'); // Example: make code editor active by default
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            const editorContainer = document.getElementById('editor-container');
+            // Default message if no file is open
+            editorContainer.innerHTML = '<div style="padding:20px; color: var(--text-secondary-color); display:flex; justify-content:center; align-items:center; height:100%;">Выберите файл для отображения его содержимого.</div>';
         });
 
-        function switchTab(event, tabName) {
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabPanes = document.querySelectorAll('.tab-pane');
+        function initializeEditor(content, language = 'javascript') {
+            const editorContainer = document.getElementById('editor-container');
+            editorContainer.innerHTML = ''; // Clear previous content or default message
 
-            tabButtons.forEach(button => button.classList.remove('active'));
-            tabPanes.forEach(pane => pane.classList.remove('active'));
+            monacoEditor = monaco.editor.create(editorContainer, {
+                value: content,
+                language: language,
+                theme: 'vs-dark', // Standard dark theme for Monaco
+                automaticLayout: true,
+                readOnly: true, // По умолчанию только для чтения
+                minimap: { enabled: true },
+                scrollbar: {
+                    verticalScrollbarSize: 10,
+                    horizontalScrollbarSize: 10
+                },
+                lineNumbers: 'on',
+                wordWrap: 'on', // 'on', 'off', 'wordWrapColumn', 'bounded'
+                wrappingIndent: "indent"
+            });
+        }
 
-            const clickedButton = event ? event.currentTarget : document.querySelector(`.tab-button[onclick*="${tabName}"]`);
-            if (clickedButton) clickedButton.classList.add('active');
+        // MOCK DATA AND FUNCTIONS
+        const MOCK_FILE_SYSTEM = {
+            "src": {
+                "app.js": "console.log('MCP Analyzer Main App');\n\nfunction initApp() {\n  loadModules();\n  setupEventListeners();\n}\n\nfunction loadModules() {\n  // Simulate loading modules\n  const ui = new UIModule();\n  const dataProcessor = new DataProcessor();\n  ui.render();\n  dataProcessor.process(DEFAULT_DATASET);\n}\n\nclass UIModule {\n  render() { console.log('UI Rendered'); }\n}\n\n// TODO: Add more classes and functions",
+                "utils": {
+                    "parser.js": "// Advanced Parser Logic\nexport function parseCode(codeString) {\n  let ast = {};\n  // Complex parsing logic here\n  if (codeString.includes('class')) {\n    ast.type = 'ClassBased';\n  } else {\n    ast.type = 'Functional';\n  }\n  return ast;\n}",
+                    "apiHandler.js": "// API Interactions\nconst API_ENDPOINT = '/api/v1/data';\nexport async function fetchData() { \n  // const response = await fetch(API_ENDPOINT);\n  // return response.json();\n return { mockData: true, timestamp: Date.now() }; \n}"
+                },
+                "components": {
+                    "Dashboard.jsx": "import React from 'react';\n\nconst Dashboard = () => {\n  return <div><h1>Project Dashboard</h1></div>;\n};\nexport default Dashboard;",
+                    "Settings.ts": "export interface AppSettings {\n  theme: 'dark' | 'light';\n  notifications: boolean;\n}"
+                }
+            },
+            "tests": {
+                "parser.test.js": "import { parseCode } from '../src/utils/parser';\n// Unit tests for parser"
+            },
+            "README.md": "# MCP Code Analyzer\nWelcome to the Multi-Component Project Code Analyzer. This tool helps visualize and understand complex codebases.",
+            "package.json": JSON.stringify({ name: "mcp-analyzer", version: "1.0.0", dependencies: {"d3": "^7.8.5", "monaco-editor": "^0.30.1"} }, null, 2)
+        };
 
-            document.getElementById(tabName).classList.add('active');
+        function buildFileTree(element, path, structure) {
+            const ul = document.createElement('ul');
+            for (const key in structure) {
+                const li = document.createElement('li');
+                const currentPath = path ? `${path}/${key}` : key;
 
-            // If switching to code editor, refresh CodeMirror if it has content
-            if (tabName === 'code-editor-pane' && codeEditor && codeEditor.getValue()) {
-                codeEditor.refresh();
+                if (typeof structure[key] === 'object') {
+                    li.classList.add('folder');
+                    li.textContent = key;
+                    li.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const existingUl = li.querySelector('ul');
+                        if (existingUl) {
+                            existingUl.remove();
+                            li.classList.remove('open');
+                        } else {
+                            buildFileTree(li, currentPath, structure[key]);
+                            li.classList.add('open');
+                        }
+                    });
+                } else {
+                    li.classList.add('file');
+                    li.textContent = key;
+                    li.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        displayFileContent(currentPath, structure[key]);
+                    });
+                }
+                ul.appendChild(li);
             }
-            // If switching to graph, initialize it (this logic will be expanded)
-            if (tabName === 'graph-pane') {
-                // initKnowledgeGraph(); // Placeholder for graph initialization
-                console.log("Switched to Knowledge Graph tab. Initialization pending.");
+            element.appendChild(ul);
+        }
+
+        let currentEditorContent = "";
+
+        function displayFileContent(filePath, content) {
+            document.getElementById('currentOpenFileName').textContent = filePath;
+            currentEditorContent = content;
+            let language = 'plaintext';
+            if (filePath.endsWith('.js')) language = 'javascript';
+            else if (filePath.endsWith('.jsx')) language = 'javascript'; // Monaco uses 'javascript' for JSX too, or 'typescript' for TSX
+            else if (filePath.endsWith('.ts')) language = 'typescript';
+            else if (filePath.endsWith('.json')) language = 'json';
+            else if (filePath.endsWith('.md')) language = 'markdown';
+            else if (filePath.endsWith('.css')) language = 'css';
+            else if (filePath.endsWith('.html')) language = 'html';
+
+            initializeEditor(content, language);
+            updateCodeMetrics(content);
+            updateIssuesList(content);
+            // Potentially update other panels based on the file content
+        }
+
+        function updateCodeMetrics(content) {
+            const lines = content.split('\\n').length;
+            // Basic complexity: count keywords like if, for, while, function, class
+            const complexityKeywords = content.match(/\\b(if|for|while|function|class|switch|case|try|catch)\\b/g) || [];
+            // Basic duplication: (This is a placeholder, real duplication needs advanced algorithms)
+            const duplication = Math.min(15, Math.floor(lines / 100)).toFixed(1); // Mock
+            // Basic comments: count lines starting with // or /*
+            const commentLines = content.match(/^\\s*(\\/\\/|\\/\\*|\\*)/gm) || [];
+            const commentPercentage = lines > 0 ? ((commentLines.length / lines) * 100).toFixed(1) : 0;
+
+            document.getElementById('metricLines').textContent = lines;
+            document.getElementById('metricComplexity').textContent = complexityKeywords.length;
+            document.getElementById('metricDuplication').textContent = duplication;
+            document.getElementById('metricComments').textContent = commentPercentage;
+        }
+
+        function updateIssuesList(content) {
+            const issuesList = document.getElementById('issuesList');
+            issuesList.innerHTML = ''; // Clear old issues
+            let issueCount = 0;
+
+            if ((content.match(/TODO:/g) || []).length > 0) {
+                const li = document.createElement('li');
+                li.textContent = `Обнаружено ${(content.match(/TODO:/g) || []).length} TODO комментариев.`;
+                li.style.color = 'yellow';
+                issuesList.appendChild(li);
+                issueCount++;
+            }
+            if (content.length > 2000 && !content.includes('module')) { // Arbitrary large file check
+                 const li = document.createElement('li');
+                li.textContent = `Файл большой (${content.length} символов) и может быть сложен для поддержки.`;
+                li.style.color = 'orange';
+                issuesList.appendChild(li);
+                issueCount++;
+            }
+            if (issueCount === 0) {
+                 issuesList.innerHTML = '<li>Проблем не обнаружено.</li>';
             }
         }
 
-        function selectFile(filePath) {
-            document.getElementById('current-file-path').textContent = filePath;
-            // Simulate loading file content
-            // In a real app, this would be an API call
-            showLoading(true, `Загрузка ${filePath}...`);
-            setTimeout(() => {
-                const fileExtension = filePath.split('.').pop().toLowerCase();
-                let mode = "text/plain";
-                let content = `// Содержимое файла ${filePath}\n\n`;
 
-                if (fileExtension === "py") {
-                    mode = "python";
-                    content += `def hello_world():\n    print("Hello from ${filePath}")\n\nclass MyClass:\n    pass`;
-                } else if (fileExtension === "js") {
-                    mode = "javascript";
-                    content += `function greet() {\n    console.log("Hello from ${filePath}");\n}\n\nconst x = 10;`;
-                } else if (fileExtension === "tsx") {
-                    mode = "text/jsx";
-                     content += `import React from 'react';\n\nconst MyComponent: React.FC = () => {\n  return <div>Hello from ${filePath}</div>;\n};\n\nexport default MyComponent;`;
-                } else if (fileExtension === "html") {
-                    mode = "xml";
-                    content += `<h1>Hello from ${filePath}</h1>\n<p>This is a sample HTML file.</p>`;
-                } else if (fileExtension === "css") {
-                    mode = "css";
-                    content += `body {\n    font-family: Arial, sans-serif;\n    margin: 0;\n}`;
-                } else if (fileExtension === "md") {
-                    mode = "markdown"; // CodeMirror doesn't have a markdown mode by default in this set
-                    content += `# ${filePath}\n\nThis is a markdown file.`;
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileTreeContainer = document.getElementById('fileTree');
+            document.getElementById('fileTreeLoader').style.display = 'block';
+            setTimeout(() => { // Simulate loading
+                document.getElementById('fileTreeLoader').style.display = 'none';
+                buildFileTree(fileTreeContainer, '', MOCK_FILE_SYSTEM);
+            }, 1000);
 
-                codeEditor.setValue(content);
-                codeEditor.setOption("mode", mode);
+            initKnowledgeGraph(); // Initialize D3 graph
+            setupFileSearch();
 
-                // Ensure the editor is visible before refreshing
-                if (document.getElementById('code-editor-pane').classList.contains('active')) {
-                     codeEditor.refresh();
-                }
-                showLoading(false);
-            }, 500);
-        }
+            // Mock Git status
+            document.getElementById('currentBranch').textContent = 'feature/analyzer-ui';
+            document.getElementById('changedFilesList').innerHTML = `
+                <li style="color: lightgreen;">M src/app.js</li>
+                <li style="color: yellow;">A src/components/Settings.ts</li>
+            `;
+        });
 
-        function showLoading(show, message = "Загрузка...") {
-            const overlay = document.getElementById('loading-overlay');
-            const msgElement = document.getElementById('loading-message');
-            if (show) {
-                msgElement.textContent = message;
-                overlay.style.display = 'flex';
-            } else {
-                overlay.style.display = 'none';
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+            if (tabName === 'graphTab') { // Re-render graph if tab is activated
+                initKnowledgeGraph();
             }
         }
 
-        // Example: Hook up analyze button
-        const analyzeRepoButton = document.getElementById('analyze-repo-button');
-        if (analyzeRepoButton) {
-            analyzeRepoButton.addEventListener('click', () => {
-                const repoUrl = document.getElementById('repo-url-input').value;
-                if (!repoUrl) {
-                    alert("Пожалуйста, введите URL репозитория.");
-                    return;
-                }
-                showLoading(true, `Анализ репозитория: ${repoUrl}...`);
-                // Simulate analysis
-                setTimeout(() => {
-                    document.getElementById('project-name').textContent = repoUrl.split('/').pop().replace('.git', '');
-                    document.getElementById('total-files').textContent = Math.floor(Math.random() * 500) + 50;
-                    document.getElementById('total-loc').textContent = Math.floor(Math.random() * 20000) + 1000;
-                    document.getElementById('total-functions').textContent = Math.floor(Math.random() * 300) + 20;
-                    document.getElementById('total-classes').textContent = Math.floor(Math.random() * 100) + 5;
-                    document.getElementById('total-comments').textContent = Math.floor(Math.random() * 5000) + 200;
-                    document.getElementById('project-size').textContent = (Math.random() * 10 + 1).toFixed(1) + " MB";
+        function setupFileSearch() {
+            const searchInput = document.getElementById('fileSearch');
+            const fileTreeRoot = document.getElementById('fileTree');
 
-                    const tech = ["Python", "JavaScript", "HTML", "CSS", "Docker"];
-                    const techStackContainer = document.getElementById('tech-stack');
-                    techStackContainer.innerHTML = ''; // Clear old
-                    for(let i=0; i<3; i++) {
-                        const li = document.createElement('li');
-                        li.textContent = tech[Math.floor(Math.random() * tech.length)];
-                        techStackContainer.appendChild(li);
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                filterTree(fileTreeRoot, searchTerm);
+            });
+
+            function filterTree(element, term) {
+                const items = element.querySelectorAll('li');
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    const isMatch = text.includes(term);
+
+                    // If it's a file, show/hide directly
+                    if (item.classList.contains('file')) {
+                        item.style.display = isMatch ? '' : 'none';
                     }
-                    showLoading(false);
-                    // Potentially switch to graph tab or update other UI elements
-                    // For example, to auto-select a file after analysis:
-                    // selectFile("apps/api/main.py");
-                }, 2000);
-            });
+                    // If it's a folder, we need more complex logic
+                    else if (item.classList.contains('folder')) {
+                        // Recursively filter children. If any child is visible, this folder should be visible.
+                        const childList = item.querySelector('ul');
+                        let hasVisibleChild = false;
+                        if (childList) {
+                           hasVisibleChild = filterTree(childList, term);
+                        }
+                        // Show folder if its name matches OR if it has a visible child
+                        item.style.display = (isMatch || hasVisibleChild) ? '' : 'none';
+
+                        // If term is empty, ensure folder is not forced open by search
+                        if(term === "" && item.classList.contains("open-by-search")){
+                            item.classList.remove("open-by-search");
+                            if(childList) childList.style.display = "none"; // Assuming default is closed unless 'open' class
+                        } else if (isMatch && childList && !item.classList.contains('open')) {
+                            // If folder name matches and it has children, expand it (optional)
+                            // childList.style.display = 'block';
+                            // item.classList.add('open-by-search'); // Mark it as opened by search
+                        }
+                         if (isMatch || hasVisibleChild) return true; // Signal to parent that this branch has a match
+                    }
+                });
+                 return Array.from(items).some(item => item.style.display !== 'none'); // Return true if any item in this list is visible
+            }
         }
 
-        // Copy code button
-        const copyCodeBtn = document.getElementById('copy-code-button');
-        if (copyCodeBtn) {
-            copyCodeBtn.addEventListener('click', () => {
-                if (codeEditor && navigator.clipboard) {
-                    navigator.clipboard.writeText(codeEditor.getValue())
-                        .then(() => alert('Код скопирован в буфер обмена!'))
-                        .catch(err => alert('Ошибка копирования: ' + err));
+
+        function initKnowledgeGraph() {
+            const graphData = {
+                nodes: [
+                    { id: "src/app.js", type: "File", size: 30 },
+                    { id: "src/utils/parser.js", type: "File", size: 20 },
+                    { id: "src/utils/apiHandler.js", type: "File", size: 20 },
+                    { id: "src/components/Dashboard.jsx", type: "Component", size: 25 },
+                    { id: "src/components/Settings.ts", type: "Interface", size: 15 },
+                    { id: "DataProcessor", type: "Class", size: 18 },
+                    { id: "UIModule", type: "Class", size: 18 },
+                    { id: "parseCode", type: "Function", size: 12 },
+                    { id: "fetchData", type: "Function", size: 12 },
+                    { id: "React", type: "Library", size: 22 }
+                ],
+                links: [
+                    { source: "src/app.js", target: "DataProcessor", type: "instantiates" },
+                    { source: "src/app.js", target: "UIModule", type: "instantiates" },
+                    { source: "src/app.js", target: "src/utils/parser.js", type: "imports" },
+                    { source: "src/utils/parser.js", target: "parseCode", type: "defines" },
+                    { source: "src/utils/apiHandler.js", target: "fetchData", type: "defines" },
+                    { source: "src/components/Dashboard.jsx", target: "React", type: "imports" },
+                    { source: "DataProcessor", target: "src/utils/apiHandler.js", type: "uses" }
+                ]
+            };
+
+            const container = d3.select("#knowledge-graph-container");
+            container.html(""); // Clear previous graph
+
+            const width = container.node().getBoundingClientRect().width;
+            const height = container.node().getBoundingClientRect().height || 300;
+
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [-width / 2, -height / 2, width, height])
+                .style("background-color", "rgba(0,0,0,0.1)")
+                .style("border-radius", "8px");
+
+            const simulation = d3.forceSimulation(graphData.nodes)
+                .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => d.type === "imports" ? 100 : 70))
+                .force("charge", d3.forceManyBody().strength(-100))
+                .force("center", d3.forceCenter());
+
+            const link = svg.append("g")
+                .selectAll("line")
+                .data(graphData.links)
+                .join("line")
+                .attr("class", "link")
+                .attr("stroke", "var(--border-color)")
+                .attr("stroke-opacity", 0.7)
+                .attr("stroke-width", 1.5);
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(graphData.nodes)
+                .join("g")
+                .attr("class", "node")
+                .call(drag(simulation));
+
+            node.append("circle")
+                .attr("r", d => d.size / 2 || 10)
+                .attr("fill", d => {
+                    if (d.type === "File") return "var(--primary-color)";
+                    if (d.type === "Component") return "var(--accent-color)";
+                    if (d.type === "Class") return "#FFD700"; /* Gold */
+                    if (d.type === "Function") return "#32CD32"; /* LimeGreen */
+                    return "#00BFFF"; /* DeepSkyBlue */
+                })
+                .attr("stroke", "var(--background-color)")
+                .attr("stroke-width", 2);
+
+            node.append("text")
+                .text(d => d.id.split('/').pop()) // Show only name for files
+                .attr("x", d => (d.size / 2 || 10) + 5)
+                .attr("y", 5)
+                .style("fill", "var(--text-color)")
+                .style("font-size", "10px")
+                .style("pointer-events", "none");
+
+            node.append("title") // Tooltip
+                .text(d => `${d.type}: ${d.id}\nSize: ${d.size}`);
+
+
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                node
+                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+
+            function drag(simulation) {
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
                 }
-            });
-        }
-        // AI Analyze button (placeholder)
-        const aiAnalyzeCodeBtn = document.getElementById('ai-analyze-code');
-        if (aiAnalyzeCodeBtn) {
-            aiAnalyzeCodeBtn.addEventListener('click', () => {
-                alert('Функция AI анализа в разработке!');
-            });
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }
+                return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+            }
         }
 
     </script>
