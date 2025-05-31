@@ -1,5 +1,5 @@
 # 🚀 MCP Code Analyzer
-![Banner](assets/thumbnail.jpg)
+![Banner](assets/repo-banner.png)
 
 
 <div align="center">

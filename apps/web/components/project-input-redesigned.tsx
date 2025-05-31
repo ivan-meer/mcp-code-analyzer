@@ -44,11 +44,15 @@ export function ProjectInput({
     }
 
     try {
-      // @ts-ignore - File System API еще не в стандартных типах
+      // @ts-ignore
       const directoryHandle = await window.showDirectoryPicker({
         mode: 'read'
       });
       
+      // Сохраняем handle папки вместо только имени
+      // Store directory handle in state
+// Removed setDirectoryHandle since it's not defined and not needed
+// The directoryHandle is used only for getting the name and files
       setProjectPath(directoryHandle.name);
       
       // Получаем список файлов для предварительного просмотра
@@ -125,7 +129,7 @@ export function ProjectInput({
   }, [setProjectPath]);
 
   const handleAnalyze = useCallback(() => {
-    if (!projectPath.trim()) {
+    if (!projectPath) {
       return;
     }
     analyzeProject();
@@ -229,37 +233,42 @@ export function ProjectInput({
             className="hidden"
           />
 
-          {/* Ручной ввод пути */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-white">
-              Или укажите путь к проекту:
+          {/* Добавляем поле для ручного ввода пути */}
+          <div className="mt-4">
+            <label htmlFor="manual-path" className="block text-sm font-medium text-slate-300 mb-1">
+              Или введите путь вручную
             </label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="mcp-code-analyzer"
-                value={projectPath}
-                onChange={(e) => setProjectPath(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-                className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-400 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500/50"
-              />
-              <Button 
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !isValidPath}
-                className="shrink-0 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAnalyzing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                <span className="ml-2">
-                  {isAnalyzing ? 'Анализируем...' : 'Анализировать'}
-                </span>
-              </Button>
-            </div>
+            <Input
+              id="manual-path"
+              type="text"
+              value={projectPath}
+              onChange={(e) => setProjectPath(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+              placeholder="Введите полный путь к проекту"
+              className="bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+            />
+            {/* Восстановленная кнопка "Анализировать" */}
+            <Button
+              className="mt-4 w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              onClick={handleAnalyze}
+              disabled={!isValidPath || isAnalyzing}
+              size="lg"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Анализируем...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  Анализировать
+                </>
+              )}
+            </Button>
           </div>
 
-          {/* Предварительный просмотр выбранных файлов */}
+          {/* Превью выбранных файлов */}
           <AnimatePresence>
             {selectedFiles.length > 0 && (
               <motion.div

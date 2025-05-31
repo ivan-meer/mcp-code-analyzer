@@ -15,6 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Component as Lightning } from '@/components/ui/lightning';
+// 🚀 Импортируем наши новые интеллектуальные системы
+import { NotificationProvider, useNotifications } from '@/components/notification-system';
+import { ProgressMonitor } from '@/components/progress-monitor';
 import {
   Code2,
   Sparkles,
@@ -55,15 +58,25 @@ interface ProjectAnalysis {
   architecture_patterns: string[];
 }
 
-export default function HomePage() {
+// 🎯 Главный компонент с интегрированными системами мониторинга
+function HomePageContent() {
   const [projectPath, setProjectPath] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ProjectAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDemo, setShowDemo] = useState(false);
   const [demoType, setDemoType] = useState<'react' | 'python'>('react');
+  
+  // 🔔 Подключаемся к системе уведомлений
+  const { notifySuccess, notifyError, notifyInfo, notifyProgress, removeNotification } = useNotifications();
 
   const loadSampleProject = (type: 'react' | 'python') => {
+    // 📢 Уведомляем пользователя о начале демонстрации
+    const progressId = notifyProgress(
+      'Загружаем демо проект',
+      `Подготавливаем ${type === 'react' ? 'React' : 'Python'} демонстрацию...`
+    );
+
     setIsAnalyzing(true);
     setError(null);
     
@@ -92,24 +105,50 @@ export default function HomePage() {
       setShowDemo(true);
       setDemoType(type);
       setIsAnalyzing(false);
-    }, 1500); // Simulate analysis time
+
+      // 🎉 Уведомляем об успешной загрузке демо
+      removeNotification(progressId);
+      notifySuccess(
+        'Демо проект загружен!',
+        `${type === 'react' ? 'React' : 'Python'} демонстрация готова к изучению`,
+        { metadata: { demoType: type, filesCount: transformedResult.files.length } }
+      );
+    }, 1500);
   };
 
   const analyzeProject = async () => {
     if (!projectPath.trim()) {
+      notifyError('Требуется путь к проекту', 'Пожалуйста, укажите путь к проекту для анализа');
       setError('Пожалуйста, укажите путь к проекту');
       return;
     }
+
+    // 🚀 Начинаем анализ с уведомлениями
+    const progressId = notifyProgress(
+      'Начинаем анализ проекта',
+      `Подключаемся к AI-движку для анализа: ${projectPath.trim()}`
+    );
 
     setIsAnalyzing(true);
     setError(null);
     setShowDemo(false);
 
+    // 📝 Логируем начало анализа
+    console.log('🎯 Запуск интеллектуального анализа проекта:', {
+      projectPath: projectPath.trim(),
+      timestamp: new Date().toISOString(),
+      sessionId: crypto.randomUUID()
+    });
+
     // Очистка пути от лишних пробелов и дублирований
     const cleanedPath = projectPath.trim().replace(/\s+/g, ' ').split(' ')[0];
 
     try {
-      const response = await fetch('/api/analyze', {
+      // 🚀 Переключаемся на мощный FastAPI сервер с AI интеграцией
+      console.log('🎯 Начинаем интеллектуальный анализ проекта:', cleanedPath);
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,13 +161,77 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Ошибка анализа: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.detail || `HTTP ${response.status}: ${response.statusText}`;
+        
+        // 📊 Детализированная обработка различных типов ошибок
+        if (response.status === 404) {
+          throw new Error(`Проект не найден: ${cleanedPath}. Проверьте правильность пути.`);
+        } else if (response.status === 403) {
+          throw new Error(`Доступ запрещён к проекту: ${cleanedPath}. Проверьте права доступа.`);
+        } else if (response.status === 500) {
+          throw new Error(`Внутренняя ошибка сервера: ${errorMessage}`);
+        } else if (response.status === 0 || !response.status) {
+          throw new Error('Не удалось подключиться к серверу анализа. Убедитесь, что FastAPI сервер запущен на порту 8000.');
+        } else {
+          throw new Error(`Ошибка анализа: ${errorMessage}`);
+        }
       }
 
       const result = await response.json();
+      
+      // 🎉 Логируем успешное завершение анализа
+      console.log('✅ Анализ завершён успешно:', {
+        files: result.files?.length || 0,
+        totalLines: result.metrics?.total_lines || 0,
+        patterns: result.architecture_patterns?.length || 0
+      });
+      
       setAnalysisResult(result);
+
+      // 🏆 Показываем успешное завершение
+      removeNotification(progressId);
+      notifySuccess(
+        'Анализ завершён успешно!',
+        `Обработано ${result.files?.length || 0} файлов, найдено ${result.metrics?.total_functions || 0} функций`,
+        { 
+          metadata: { 
+            projectPath: cleanedPath,
+            filesAnalyzed: result.files?.length || 0,
+            totalLines: result.metrics?.total_lines || 0,
+            patterns: result.architecture_patterns || []
+          }
+        }
+      );
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла неизвестная ошибка');
+      // 🚨 Комплексная система обработки и логирования ошибок
+      const errorMessage = err instanceof Error ? err.message : 'Произошла неизвестная ошибка';
+      
+      console.error('❌ Ошибка при анализе проекта:', {
+        error: errorMessage,
+        projectPath: cleanedPath,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href
+      });
+      
+      setError(errorMessage);
+
+      // 💥 Показываем подробную ошибку пользователю
+      removeNotification(progressId);
+      notifyError(
+        'Ошибка анализа проекта',
+        errorMessage,
+        {
+          persistent: true, // Ошибки не исчезают автоматически
+          metadata: {
+            projectPath: cleanedPath,
+            errorType: err instanceof Error ? err.name : 'UnknownError',
+            timestamp: new Date().toISOString()
+          }
+        }
+      );
     } finally {
       setIsAnalyzing(false);
     }
@@ -139,6 +242,9 @@ export default function HomePage() {
     setShowDemo(false);
     setProjectPath('');
     setError(null);
+    
+    // 🏠 Уведомляем о возврате на главную
+    notifyInfo('Возврат на главную', 'Готовы к новому анализу проекта');
   };
 
   return (
@@ -147,43 +253,41 @@ export default function HomePage() {
       
       {/* Main Content */}
       <main className="pt-16 lg:pt-20">
-
-
         {!analysisResult ? (
           <>
             {/* Enhanced Hero Section */}
             <div className="relative h-screen bg-gradient-to-br from-gray-900 to-slate-950 dark:from-gray-900 dark:to-black">
-  <Lightning
-    hue={220}
-    xOffset={0.0}
-    speed={0.7}
-    intensity={1.2}
-    size={1.5}
-  />
-  <div className="absolute inset-0 flex flex-col justify-center items-center text-white z-10 px-4">
-    <div className="max-w-4xl w-full text-center">
-      <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
-        Превратите код в интерактивную визуализацию
-      </h1>
-      <p className="text-xl text-slate-700 dark:text-slate-300 mb-8 mx-auto max-w-2xl leading-relaxed">
-        Интеллектуальный анализ кода с AI-объяснениями и красивой визуализацией для глубокого понимания структуры вашего проекта
-      </p>
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-        className="mb-10 max-w-lg mx-auto"
-      >
-        <div className="relative">
-          <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-lg rounded-full opacity-30"></div>
-          <div className="relative bg-blue-100 dark:bg-blue-900/20 p-1 rounded-full w-16 h-16 mx-auto flex items-center justify-center text-blue-600 dark:text-blue-400">
-            <Code2 className="w-10 h-10" />
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  </div>
-</div>
+              <Lightning
+                hue={220}
+                xOffset={0.0}
+                speed={0.7}
+                intensity={1.2}
+                size={1.5}
+              />
+              <div className="absolute inset-0 flex flex-col justify-center items-center text-white z-10 px-4">
+                <div className="max-w-4xl w-full text-center">
+                  <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
+                    Превратите код в интерактивную визуализацию
+                  </h1>
+                  <p className="text-xl text-slate-700 dark:text-slate-300 mb-8 mx-auto max-w-2xl leading-relaxed">
+                    Интеллектуальный анализ кода с AI-объяснениями и красивой визуализацией для глубокого понимания структуры вашего проекта
+                  </p>
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                    className="mb-10 max-w-lg mx-auto"
+                  >
+                    <div className="relative">
+                      <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-lg rounded-full opacity-30"></div>
+                      <div className="relative bg-blue-100 dark:bg-blue-900/20 p-1 rounded-full w-16 h-16 mx-auto flex items-center justify-center text-blue-600 dark:text-blue-400">
+                        <Code2 className="w-10 h-10" />
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
             
             {/* Demo Showcase Section */}
             <section className="py-20 relative">
@@ -328,13 +432,31 @@ export default function HomePage() {
           </div>
         )}
         
-        {/* Loading State Overlay */}
-        <LoadingState isAnalyzing={isAnalyzing} />
+        {/* 🔄 Интеллектуальная система мониторинга прогресса */}
+        <ProgressMonitor 
+          isActive={isAnalyzing && !showDemo} 
+          projectPath={projectPath}
+          onComplete={() => {
+            console.log('🎉 Анализ завершён через систему мониторинга');
+          }}
+          onError={(error) => {
+            console.error('💥 Ошибка в системе мониторинга:', error);
+          }}
+        />
       </main>
       {/* End of Main Content */}
       
       {/* Enhanced Footer */}
       <ModernFooter />
     </div>
+  );
+}
+
+// 🎯 Главный экспортируемый компонент с провайдерами
+export default function HomePage() {
+  return (
+    <NotificationProvider>
+      <HomePageContent />
+    </NotificationProvider>
   );
 }
