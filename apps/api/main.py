@@ -10,11 +10,13 @@ import json
 import sqlite3
 from pathlib import Path
 import uvicorn
+
+DATABASE_URL = "/tmp/code_analyzer.db" # Define an absolute path for the DB
 import asyncio
 import logging
 
 # Импорт AI сервисов
-from ai_services import (
+from .ai_services import ( # Changed to relative import
     initialize_ai_services, 
     get_ai_manager, 
     CodeContext, 
@@ -124,7 +126,7 @@ app.add_middleware(
 # Инициализация базы данных
 def init_database():
     """Инициализация SQLite базы данных"""
-    conn = sqlite3.connect("code_analyzer.db")
+    conn = sqlite3.connect(DATABASE_URL)
     cursor = conn.cursor()
     
     # Таблица проектов
@@ -166,6 +168,177 @@ def init_database():
     
     conn.commit()
     conn.close()
+
+# Placeholder for where the class should be inserted.
+# It should be placed before the `CodeAnalyzer` class.
+# For example:
+# from pathlib import Path
+# import os
+# from typing import List, Optional, Dict # Add Dict here
+#
+# # ... (other imports like BaseModel if needed for typing)
+#
+class ImportResolver:
+    def __init__(self, project_path: str):
+        self.project_path = Path(project_path).resolve()
+        self.source_file_path: Optional[Path] = None # Will be set for each file
+
+    def _resolve_python_import(self, import_name: str, current_file_dir: Path) -> Optional[str]:
+        # Example: from . import sibling
+        # Example: from .sibling import something
+        # Example: from ..parent import something
+        # Example: import project_module.submodule
+
+        if import_name.startswith('.'):
+            # Relative import
+            parts = import_name.split('.')
+            num_dots = 0
+            for part in parts:
+                if part == '':
+                    num_dots += 1
+                else:
+                    break
+
+            base_path = current_file_dir
+            for _ in range(num_dots -1): # one dot means current dir, two dots means parent, etc.
+                base_path = base_path.parent
+
+            module_path_parts = [part for part in parts if part != '']
+
+            # Try resolving as a package first (directory with __init__.py)
+            potential_path = base_path.joinpath(*module_path_parts)
+            if potential_path.is_dir() and (potential_path / "__init__.py").exists():
+                return str(potential_path / "__init__.py")
+
+            # Try resolving as a .py file
+            if module_path_parts:
+                 potential_py_file = base_path.joinpath(*module_path_parts[:-1], module_path_parts[-1] + ".py")
+                 if potential_py_file.exists():
+                     return str(potential_py_file)
+                 # case where from . import sibling (sibling is a .py file)
+                 potential_py_file_direct = base_path.joinpath(module_path_parts[0] + ".py")
+                 if len(module_path_parts) == 1 and potential_py_file_direct.exists():
+                     return str(potential_py_file_direct)
+        else:
+            # Absolute import within the project
+            parts = import_name.split('.')
+            # Check project root
+            potential_path = self.project_path.joinpath(*parts)
+            if potential_path.is_dir() and (potential_path / "__init__.py").exists():
+                return str(potential_path / "__init__.py")
+
+            potential_py_file = self.project_path.joinpath(*(parts[:-1]), parts[-1] + ".py")
+            if potential_py_file.exists():
+                return str(potential_py_file)
+
+            # Also check common src or app directories if project_path is not the direct root of modules
+            for common_root_dir_name in ["src", "app"]:
+                common_root_path = self.project_path / common_root_dir_name
+                if common_root_path.exists() and common_root_path.is_dir():
+                    potential_path_in_common_dir = common_root_path.joinpath(*parts)
+                    if potential_path_in_common_dir.is_dir() and (potential_path_in_common_dir / "__init__.py").exists():
+                        return str(potential_path_in_common_dir / "__init__.py")
+
+                    potential_py_file_in_common_dir = common_root_path.joinpath(*(parts[:-1]), parts[-1] + ".py")
+                    if potential_py_file_in_common_dir.exists():
+                        return str(potential_py_file_in_common_dir)
+
+        return None # Could not resolve
+
+    def _resolve_js_ts_import(self, import_path: str, current_file_dir: Path) -> Optional[str]:
+        # Example: import './sibling'
+        # Example: import '../parent/component'
+        # Example: import '~/app/utils' (assuming ~ maps to project_path/src or project_path)
+        # Example: import '@/components/button' (assuming @ maps to project_path/src or project_path)
+
+        original_import_path = import_path # Keep for error messages if needed
+
+        # Handle aliases like ~/... or @/...
+        # This is a common convention, actual paths might be defined in tsconfig.json or jsconfig.json
+        # For simplicity, we'll try a few common base paths for aliases.
+        alias_bases = [self.project_path, self.project_path / 'src', self.project_path / 'app']
+
+        if import_path.startswith(('~/', '@/')):
+            path_without_alias = import_path[2:]
+            for base in alias_bases:
+                potential_path = base / path_without_alias
+                resolved = self._check_js_ts_extensions(potential_path)
+                if resolved: return str(resolved)
+        elif import_path.startswith('.'): # Relative imports ./ ../
+            potential_path = (current_file_dir / import_path).resolve()
+            resolved = self._check_js_ts_extensions(potential_path)
+            if resolved: return str(resolved)
+        else: # Could be a project absolute path (from a baseDir) or a node_module
+              # For now, we only resolve project absolute paths based on common structures
+            for base in alias_bases: # Treat non-relative paths as potentially aliased from root
+                potential_path = base / import_path
+                resolved = self._check_js_ts_extensions(potential_path)
+                if resolved: return str(resolved)
+
+        return None # Could not resolve
+
+    def _check_js_ts_extensions(self, base_path: Path) -> Optional[Path]:
+        extensions = ['.js', '.ts', '.jsx', '.tsx', '.json', '.mjs', '.cjs']
+        # Check direct path first (e.g. import './styles.css')
+        if base_path.exists() and base_path.is_file():
+            return base_path
+
+        # Check for file with extension
+        for ext in extensions:
+            if (base_path.parent / (base_path.name + ext)).exists():
+                return base_path.parent / (base_path.name + ext)
+
+        # Check for index file in directory (e.g. import './component' -> './component/index.js')
+        if base_path.is_dir():
+            for ext in extensions:
+                if (base_path / ('index' + ext)).exists():
+                    return base_path / ('index' + ext)
+        return None
+
+    def resolve_imports(self, imports: List[str], source_file_path_str: str) -> List[Dict[str, Optional[str]]]:
+        self.source_file_path = Path(source_file_path_str).resolve()
+        current_file_dir = self.source_file_path.parent
+
+        resolved_imports_list = []
+
+        for import_entry in imports:
+            original_import = import_entry # In case it's already an absolute path or unresolvable
+            resolved_path_str: Optional[str] = None
+
+            # Determine language/type by source file extension for now
+            source_ext = self.source_file_path.suffix
+
+            try:
+                if source_ext == '.py':
+                    resolved_path_str = self._resolve_python_import(import_entry, current_file_dir)
+                elif source_ext in ['.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs']:
+                    resolved_path_str = self._resolve_js_ts_import(import_entry, current_file_dir)
+                # Add more languages later if needed
+
+                if resolved_path_str:
+                    # Normalize to relative path from project root for consistency if needed,
+                    # or keep absolute. For now, returning absolute.
+                    resolved_imports_list.append({
+                        "original": import_entry,
+                        "resolved": str(Path(resolved_path_str).resolve()) # Ensure it's absolute
+                    })
+                else:
+                    # If not resolved, store the original path.
+                    # The frontend might still try to match it or display it as unresolved.
+                    resolved_imports_list.append({
+                        "original": import_entry,
+                        "resolved": None # Explicitly None if not resolved by this resolver
+                    })
+            except Exception as e:
+                # Log error here if a logger is available
+                logger.warning(f"Error resolving import '{import_entry}' in '{source_file_path_str}': {e}", exc_info=True)
+                resolved_imports_list.append({
+                    "original": import_entry,
+                    "resolved": None, # Mark as unresolved on error
+                    "error": str(e)
+                })
+
+        return resolved_imports_list
 
 # Утилиты для анализа кода
 class CodeAnalyzer:
@@ -316,7 +489,7 @@ class CodeAnalyzer:
         return file_info
     
     @staticmethod
-    def analyze_project(project_path: str) -> ProjectAnalysisResult:
+    def enhanced_analyze_project(project_path: str) -> ProjectAnalysisResult:
         """Анализ всего проекта"""
         path_obj = Path(project_path)
         
@@ -343,14 +516,23 @@ class CodeAnalyzer:
         all_project_todos = []
         project_docs_list: List[DocFile] = []
 
+        # Instantiate ImportResolver with the project_path
+        import_resolver = ImportResolver(project_path) # Added this line
+
         for file_info in files:
-            # Dependencies
-            for import_path in file_info.imports:
+            # Resolve imports for the current file
+            resolved_import_details = import_resolver.resolve_imports(file_info.imports, file_info.path)
+
+            for res_import in resolved_import_details:
                 dependencies.append({
                     "from": file_info.path,
-                    "to": import_path,
+                    "to": res_import["resolved"] if res_import["resolved"] else res_import["original"], # Use resolved if available
+                    "original_import": res_import["original"], # Keep original for context
+                    "resolved_path": res_import["resolved"],   # Explicitly store resolved path
+                    "error": res_import.get("error"),          # Store error if any
                     "type": "import"
                 })
+
             # Aggregate TODOs
             if file_info.todos:
                 for todo in file_info.todos:
@@ -409,20 +591,20 @@ async def root():
         "status": "running",
         "endpoints": {
             "docs": "/docs",
-            "analyze": "/api/analyze",
+            "analyze": "/api/enhanced_analyze", # Updated route
             "explain": "/api/explain",
             "projects": "/api/projects"
         }
     }
 
-@app.post("/api/analyze", response_model=ProjectAnalysisResult)
-async def analyze_project(request: ProjectAnalysisRequest):
+@app.post("/api/enhanced_analyze", response_model=ProjectAnalysisResult)
+async def enhanced_analyze_project(request: ProjectAnalysisRequest):
     """Анализ проекта"""
     try:
-        result = CodeAnalyzer.analyze_project(request.path)
+        result = CodeAnalyzer.enhanced_analyze_project(request.path)
         
         # Сохраняем результат в базу
-        conn = sqlite3.connect("code_analyzer.db")
+        conn = sqlite3.connect(DATABASE_URL)
         cursor = conn.cursor()
         
         # Сохраняем проект
@@ -569,7 +751,7 @@ async def comprehensive_analysis(request: ComprehensiveAnalysisRequest):
         
         # Анализируем проект для контекста
         try:
-            project_analysis = CodeAnalyzer.analyze_project(request.project_path)
+            project_analysis = CodeAnalyzer.enhanced_analyze_project(request.project_path)
             project_context = {
                 "total_files": project_analysis.metrics["total_files"],
                 "total_lines": project_analysis.metrics["total_lines"],
@@ -668,7 +850,7 @@ async def get_ai_status():
 @app.get("/api/projects")
 async def get_projects():
     """Получение списка проектов"""
-    conn = sqlite3.connect("code_analyzer.db")
+    conn = sqlite3.connect(DATABASE_URL)
     cursor = conn.cursor()
     
     cursor.execute("""
