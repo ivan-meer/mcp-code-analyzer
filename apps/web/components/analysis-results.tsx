@@ -97,7 +97,7 @@ const getFileIcon = (type: string, name: string) => {
     'yaml': ListTree, // YAML
     'yml': ListTree,  // YAML
     'conf': Settings2,// Nginx .conf or other .conf files
-    'sh': FileTerminal, // Shell script (using FileTerminal for more specificity over Terminal)
+    'sh': Terminal, // Shell script (using Terminal as FileTerminal is not available)
     'sql': Database,  // SQL
     'css': FileCode,
     'scss': FileCode,
@@ -467,7 +467,7 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
                               <div className="flex-grow">
                                 <div className="flex items-center justify-between mb-1">
                                   <Badge
-                                    variant={todo.type === 'FIXME' ? 'destructive' : (todo.type === 'HACK' ? 'warning' : 'info')}
+                                    variant={todo.type === 'FIXME' ? 'destructive' : (todo.type === 'HACK' ? 'outline' : 'secondary')}
                                     className="text-xs"
                                   >
                                     {todo.type}

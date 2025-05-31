@@ -68,6 +68,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterLines, setFilterLines] = useState<number>(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -89,7 +90,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
   // Enhanced color schemes for different file types and relationships
   const getNodeColor = useCallback((node: Node) => {
     // Specific name matches first
-    if (node.name.toLowerCase() === 'dockerfile') return '#384D54';
+    if (node.name && node.name.toLowerCase() === 'dockerfile') return '#384D54';
     if (node.name && (node.name.includes('test') || node.name.includes('spec'))) return '#10b981'; // Test green
     if (node.name && (node.name.includes('config') || node.name.includes('.config.'))) return '#f59e0b'; // Generic config orange
     // Keywords for primary technologies (can override type-based)
@@ -156,12 +157,12 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       'yaml': ListTree,
       'yml': ListTree,
       'conf': Settings2,
-      'sh': FileTerminal,
+      'sh': Terminal,
       'sql': Database,
-      'css': FileCode,
-      'scss': FileCode,
-      'html': Globe,
-      'json': FileJson,
+      'css': FileCode2,
+      'scss': FileCode2,
+      'html': FileCode2,
+      'json': Braces,
       'md': FileText,
       'config': Settings,
       'test': Eye,
@@ -204,7 +205,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
 
     // Transform the project data into nodes and links for D3
     const nodes: Node[] = data.files
-      .filter(file => filterType === 'all' || file.type === filterType)
+      .filter(file => (filterType === 'all' || file.type === filterType) && (filterLines === 0 || (file.lines_of_code && file.lines_of_code >= filterLines)))
       .map(file => ({
         id: file.path,
         name: file.name || 'Unnamed',
@@ -301,20 +302,20 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', 'url(#linkGradient)') // Using gradient for links
-      .attr('stroke-opacity', 0.7) // Adjusted opacity for gradient
-      .attr('stroke-width', d => 1.5 + Math.sqrt((d.weight || 1) * 3)) // Adjusted thickness
+      .attr('stroke', 'url(#linkGradient)') // Используем градиент для линий
+      .attr('stroke-opacity', 0.7) // Настроенная прозрачность для градиента
+      .attr('stroke-width', d => 1.5 + Math.sqrt((d.weight || 1) * 3)) // Настроенная толщина
       .attr('marker-end', 'url(#arrowhead)')
-      .classed('animate-data-flow', true) // Apply data flow animation class
+      .classed('animate-data-flow', true) // Применяем класс анимации потока данных
       .style('cursor', 'pointer')
       .on('mouseover', function(event, d) {
         d3.select(this)
           .transition()
           .duration(200)
-          .attr('stroke-opacity', 0.9) // Slightly more opaque on hover
+          .attr('stroke-opacity', 0.9) // Более непрозрачный при наведении
           .attr('stroke-width', (1.5 + Math.sqrt((d.weight || 1) * 3)) + 2);
         
-        // Highlight connected nodes
+        // Выделяем связанные узлы
         nodeElements
           .transition()
           .duration(200)
@@ -322,10 +323,12 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
             (n.id === (d.source as Node).id || n.id === (d.target as Node).id) ? 1 : 0.3
           );
         
-        // Show tooltip with link type
+        // Показываем всплывающую подсказку с типом связи и дополнительной информацией
+        const midX = (((d.source as Node).x || 0) + ((d.target as Node).x || 0)) / 2;
+        const midY = (((d.source as Node).y || 0) + ((d.target as Node).y || 0)) / 2;
         const tooltip = visualizationGroup.append('g')
           .attr('class', 'tooltip')
-          .attr('transform', `translate(${(event.pageX)}, ${(event.pageY - 10)})`);
+          .attr('transform', `translate(${midX}, ${midY - 10})`);
           
         const tooltipRect = tooltip.append('rect')
           .attr('fill', 'rgba(0, 0, 0, 0.9)')
@@ -337,22 +340,34 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           .attr('fill', 'white')
           .attr('font-size', '12px')
           .attr('x', 8)
-          .attr('y', 16)
-          .text(`Связь: ${d.type}`);
+          .attr('y', 16);
+          
+        tooltipText.append('tspan')
+          .text(`Связь: ${d.type}`)
+          .attr('font-weight', 'bold');
+          
+        if (d.weight) {
+          tooltipText.append('tspan')
+            .text(`Вес: ${d.weight}`)
+            .attr('x', 8)
+            .attr('dy', '1.2em');
+        }
           
         const bbox = tooltipText.node()?.getBBox();
         if (bbox) {
           tooltipRect
             .attr('width', bbox.width + 16)
-            .attr('height', bbox.height + 12);
+            .attr('height', bbox.height + 12)
+            .attr('x', bbox.x - 8)
+            .attr('y', bbox.y - 8);
         }
       })
       .on('mouseout', function(event, d) {
         d3.select(this)
           .transition()
           .duration(200)
-          .attr('stroke-opacity', 0.7) // Restore original opacity
-          .attr('stroke-width', 1.5 + Math.sqrt((d.weight || 1) * 3)); // Restore original thickness
+          .attr('stroke-opacity', 0.7) // Восстанавливаем исходную прозрачность
+          .attr('stroke-width', 1.5 + Math.sqrt((d.weight || 1) * 3)); // Восстанавливаем исходную толщину
         
         nodeElements
           .transition()
@@ -410,8 +425,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .attr('stroke-width', 1.5) // Adjusted stroke width
       .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'); // Adjusted shadow
 
-
-    // Add node icons using foreignObject
+    // Add node icons using foreignObject for better visual recognition
     const iconSizePercentage = 0.7; // % of node radius for icon size
     nodeElements.select('foreignObject').remove(); // Clear existing foreignObjects if any during re-render
 
@@ -703,7 +717,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
             )}
           </div>
           
-          {/* File Type Filters with Enhanced Design */}
+          {/* File Type and Lines Filters with Enhanced Design */}
           <div className="flex flex-wrap gap-2 mb-4">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
               <Filter className="h-4 w-4 text-cyan-400" />
@@ -735,6 +749,37 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 </Button>
               );
             })}
+          </div>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+              <Filter className="h-4 w-4 text-cyan-400" />
+              Фильтр по строкам:
+            </div>
+            
+            <Button
+              variant={filterLines === 0 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterLines(0)}
+              className="h-7 px-3 text-xs"
+            >
+              Все файлы
+            </Button>
+            <Button
+              variant={filterLines === 100 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterLines(100)}
+              className="h-7 px-3 text-xs glass"
+            >
+              {'>'}= 100 строк
+            </Button>
+            <Button
+              variant={filterLines === 500 ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterLines(500)}
+              className="h-7 px-3 text-xs glass"
+            >
+              {'>'}= 500 строк
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -874,7 +919,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                     <div className="flex justify-between items-center mb-1">
                       <h5 className="text-xs font-medium text-slate-300">Functions ({selectedNode.functions.length})</h5>
                       {selectedNode.functions.length > 5 && (
-                        <Button variant="ghost" size="xs" onClick={() => setIsFunctionsExpanded(!isFunctionsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                        <Button variant="ghost" size="sm" onClick={() => setIsFunctionsExpanded(!isFunctionsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
                           {isFunctionsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
                           {isFunctionsExpanded ? 'Show less' : 'Show more'}
                         </Button>
@@ -896,7 +941,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                     <div className="flex justify-between items-center mb-1">
                       <h5 className="text-xs font-medium text-slate-300">Imports ({selectedNode.imports.length})</h5>
                       {selectedNode.imports.length > 5 && (
-                        <Button variant="ghost" size="xs" onClick={() => setIsImportsExpanded(!isImportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                        <Button variant="ghost" size="sm" onClick={() => setIsImportsExpanded(!isImportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
                           {isImportsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
                           {isImportsExpanded ? 'Show less' : 'Show more'}
                         </Button>
@@ -918,7 +963,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                     <div className="flex justify-between items-center mb-1">
                       <h5 className="text-xs font-medium text-slate-300">Exports ({selectedNode.exports.length})</h5>
                       {selectedNode.exports.length > 5 && (
-                        <Button variant="ghost" size="xs" onClick={() => setIsExportsExpanded(!isExportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                        <Button variant="ghost" size="sm" onClick={() => setIsExportsExpanded(!isExportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
                           {isExportsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
                           {isExportsExpanded ? 'Show less' : 'Show more'}
                         </Button>
