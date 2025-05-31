@@ -56,8 +56,13 @@ interface AnalysisProgress {
 
 interface ProgressMonitorProps {
   isActive: boolean;
-  onComplete?: () => void;
-  onError?: (error: string) => void;
+  progress: AnalysisProgress;
+  logs: Array<{
+    timestamp: Date;
+    stage: AnalysisStage;
+    message: string;
+    duration?: number;
+  }>;
   projectPath?: string;
 }
 
@@ -128,137 +133,22 @@ const stageConfig = {
   }
 };
 
-export function ProgressMonitor({ isActive, onComplete, onError, projectPath }: ProgressMonitorProps) {
-  const [progress, setProgress] = useState<AnalysisProgress>({
-    stage: 'initializing',
-    percentage: 0,
-    filesProcessed: 0,
-    totalFiles: 0,
-    startTime: new Date()
-  });
-
-  const [logs, setLogs] = useState<Array<{
-    timestamp: Date;
-    stage: AnalysisStage;
-    message: string;
-    duration?: number;
-  }>>([]);
-
-  // 📝 Добавление записи в лог
-  const addLog = useCallback((stage: AnalysisStage, message: string, duration?: number) => {
-    const logEntry = {
-      timestamp: new Date(),
-      stage,
-      message,
-      duration
-    };
-    
-    setLogs(prev => [...prev, logEntry]);
-    
-    // 🔍 Детальное логирование для разработчиков
-    console.log(`🔄 [${stage.toUpperCase()}] ${message}`, {
-      timestamp: logEntry.timestamp.toISOString(),
-      duration,
-      projectPath
-    });
-  }, [projectPath]);
-
-  // 🎯 Симуляция прогресса анализа (в реальной реализации это будет получать данные от API)
-  const simulateProgress = useCallback(async () => {
-    if (!isActive) return;
-
-    const stages: AnalysisStage[] = [
-      'initializing',
-      'scanning', 
-      'parsing',
-      'ai-processing',
-      'building-graph',
-      'generating-insights',
-      'finalizing',
-      'completed'
-    ];
-
-    let currentStageIndex = 0;
-    const totalDuration = Object.values(stageConfig).reduce((sum, config) => sum + config.duration, 0);
-    let elapsedTime = 0;
-
-    for (const stage of stages) {
-      if (!isActive) break;
-
-      const config = stageConfig[stage];
-      const stageStartTime = Date.now();
-      
-      setProgress(prev => ({
-        ...prev,
-        stage,
-        startTime: prev.startTime,
-        filesProcessed: stage === 'scanning' ? Math.floor(Math.random() * 50) + 10 : prev.filesProcessed,
-        totalFiles: stage === 'scanning' ? Math.floor(Math.random() * 100) + 50 : prev.totalFiles
-      }));
-
-      addLog(stage, config.description);
-
-      // 📈 Плавная анимация прогресса для текущего этапа
-      const steps = 20;
-      const stepDuration = config.duration / steps;
-
-      for (let step = 0; step <= steps; step++) {
-        if (!isActive) break;
-
-        const stageProgress = (step / steps) * 100;
-        const overallProgress = ((elapsedTime + (config.duration * step / steps)) / totalDuration) * 100;
-
-        setProgress(prev => ({
-          ...prev,
-          percentage: Math.min(overallProgress, 95) // Никогда не показываем 100% до фактического завершения
-        }));
-
-        await new Promise(resolve => setTimeout(resolve, stepDuration));
-      }
-
-      elapsedTime += config.duration;
-      
-      const stageDuration = Date.now() - stageStartTime;
-      addLog(stage, `${config.label} завершён за ${stageDuration}ms`, stageDuration);
-      
-      currentStageIndex++;
-    }
-
-    // 🎉 Завершение анализа
-    if (isActive) {
-      setProgress(prev => ({
-        ...prev,
-        stage: 'completed',
-        percentage: 100,
-        estimatedCompletion: new Date()
-      }));
-
-      const totalTime = Date.now() - progress.startTime.getTime();
-      addLog('completed', `Анализ завершён за ${totalTime}ms`, totalTime);
-      
-      onComplete?.();
-    }
-  }, [isActive, onComplete, addLog, progress.startTime]);
-
-  // 🚀 Запуск симуляции при активации
-  useEffect(() => {
-    if (isActive) {
-      simulateProgress();
-    }
-  }, [isActive, simulateProgress]);
-
+export function ProgressMonitor({ isActive, progress, logs, projectPath }: ProgressMonitorProps) {
   // 📊 Вычисление статистики производительности
-  const getPerformanceStats = useCallback(() => {
-    const totalTime = Date.now() - progress.startTime.getTime();
+  const getPerformanceStats = () => {
+    const totalTime = progress.startTime && progress.estimatedCompletion
+      ? progress.estimatedCompletion.getTime() - progress.startTime.getTime()
+      : progress.startTime
+        ? Date.now() - progress.startTime.getTime()
+        : 0;
     const avgTimePerFile = progress.filesProcessed > 0 ? totalTime / progress.filesProcessed : 0;
     const filesPerSecond = progress.filesProcessed > 0 ? (progress.filesProcessed / (totalTime / 1000)) : 0;
-    
     return {
       totalTime,
       avgTimePerFile,
       filesPerSecond: filesPerSecond.toFixed(2)
     };
-  }, [progress]);
+  };
 
   if (!isActive) return null;
 

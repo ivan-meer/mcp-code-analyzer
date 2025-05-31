@@ -66,7 +66,12 @@ function HomePageContent() {
   const [error, setError] = useState<string | null>(null);
   const [showDemo, setShowDemo] = useState(false);
   const [demoType, setDemoType] = useState<'react' | 'python'>('react');
-  
+
+  // Новое: состояние для projectId и прогресса анализа
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<any>(null);
+  const sseRef = React.useRef<EventSource | null>(null);
+
   // 🔔 Подключаемся к системе уведомлений
   const { notifySuccess, notifyError, notifyInfo, notifyProgress, removeNotification } = useNotifications();
 
@@ -123,6 +128,11 @@ function HomePageContent() {
       return;
     }
 
+    // Генерируем projectId для анализа и SSE
+    const newProjectId = Math.random().toString(36).slice(2) + Date.now();
+    setProjectId(newProjectId);
+    setProgress(null);
+
     // 🚀 Начинаем анализ с уведомлениями
     const progressId = notifyProgress(
       'Начинаем анализ проекта',
@@ -137,16 +147,34 @@ function HomePageContent() {
     console.log('🎯 Запуск интеллектуального анализа проекта:', {
       projectPath: projectPath.trim(),
       timestamp: new Date().toISOString(),
-      sessionId: crypto.randomUUID()
+      sessionId: Math.random().toString(36).slice(2) + Date.now()
     });
 
     // Очистка пути от лишних пробелов и дублирований
     const cleanedPath = projectPath.trim().replace(/\s+/g, ' ').split(' ')[0];
 
+    // SSE подписка на прогресс
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+    const sse = new EventSource(`/api/analyze/progress?id=${newProjectId}`);
+    sseRef.current = sse;
+    sse.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setProgress(data);
+      } catch {}
+    };
+    sse.onerror = () => {
+      sse.close();
+      sseRef.current = null;
+    };
+
     try {
       // 🚀 Переключаемся на мощный FastAPI сервер с AI интеграцией
       console.log('🎯 Начинаем интеллектуальный анализ проекта:', cleanedPath);
-      
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const response = await fetch(`${apiUrl}/api/analyze`, {
         method: 'POST',
@@ -155,6 +183,7 @@ function HomePageContent() {
         },
         body: JSON.stringify({
           path: cleanedPath,
+          projectId: newProjectId,
           include_tests: true,
           analysis_depth: 'medium'
         }),
@@ -163,7 +192,7 @@ function HomePageContent() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || errorData.detail || `HTTP ${response.status}: ${response.statusText}`;
-        
+
         // 📊 Детализированная обработка различных типов ошибок
         if (response.status === 404) {
           throw new Error(`Проект не найден: ${cleanedPath}. Проверьте правильность пути.`);
@@ -179,14 +208,14 @@ function HomePageContent() {
       }
 
       const result = await response.json();
-      
+
       // 🎉 Логируем успешное завершение анализа
       console.log('✅ Анализ завершён успешно:', {
         files: result.files?.length || 0,
         totalLines: result.metrics?.total_lines || 0,
         patterns: result.architecture_patterns?.length || 0
       });
-      
+
       setAnalysisResult(result);
 
       // 🏆 Показываем успешное завершение
@@ -194,8 +223,8 @@ function HomePageContent() {
       notifySuccess(
         'Анализ завершён успешно!',
         `Обработано ${result.files?.length || 0} файлов, найдено ${result.metrics?.total_functions || 0} функций`,
-        { 
-          metadata: { 
+        {
+          metadata: {
             projectPath: cleanedPath,
             filesAnalyzed: result.files?.length || 0,
             totalLines: result.metrics?.total_lines || 0,
@@ -203,11 +232,11 @@ function HomePageContent() {
           }
         }
       );
-      
+
     } catch (err) {
       // 🚨 Комплексная система обработки и логирования ошибок
       const errorMessage = err instanceof Error ? err.message : 'Произошла неизвестная ошибка';
-      
+
       console.error('❌ Ошибка при анализе проекта:', {
         error: errorMessage,
         projectPath: cleanedPath,
@@ -215,7 +244,7 @@ function HomePageContent() {
         userAgent: navigator.userAgent,
         url: window.location.href
       });
-      
+
       setError(errorMessage);
 
       // 💥 Показываем подробную ошибку пользователю
@@ -234,6 +263,10 @@ function HomePageContent() {
       );
     } finally {
       setIsAnalyzing(false);
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
     }
   };
 
@@ -434,14 +467,35 @@ function HomePageContent() {
         
         {/* 🔄 Интеллектуальная система мониторинга прогресса */}
         <ProgressMonitor 
-          isActive={isAnalyzing && !showDemo} 
-          projectPath={projectPath}
-          onComplete={() => {
-            console.log('🎉 Анализ завершён через систему мониторинга');
+          isActive={isAnalyzing && !showDemo}
+          progress={{
+            stage: progress?.status === 'completed'
+              ? 'completed'
+              : isAnalyzing
+                ? 'scanning'
+                : 'completed',
+            percentage: progress?.percentage ?? (analysisResult ? 100 : 0),
+            filesProcessed: progress?.filesProcessed ?? (analysisResult ? analysisResult.metrics.total_files : 0),
+            totalFiles: progress?.totalFiles ?? (analysisResult ? analysisResult.metrics.total_files : 0),
+            startTime: new Date(),
+            estimatedCompletion: progress?.status === 'completed' ? new Date() : undefined,
+            currentFile: undefined,
+            metadata: {}
           }}
-          onError={(error) => {
-            console.error('💥 Ошибка в системе мониторинга:', error);
-          }}
+          logs={
+            progress
+              ? [
+                  {
+                    timestamp: new Date(),
+                    stage: progress.status === 'completed' ? 'completed' : 'scanning',
+                    message: progress.status === 'completed'
+                      ? 'Анализ успешно завершён'
+                      : `Обработано файлов: ${progress.filesProcessed ?? 0} / ${progress.totalFiles ?? 0}`,
+                    duration: undefined
+                  }
+                ]
+              : []
+          }
         />
       </main>
       {/* End of Main Content */}
