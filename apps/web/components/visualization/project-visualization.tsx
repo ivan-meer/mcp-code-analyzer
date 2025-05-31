@@ -78,6 +78,21 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .attr('height', height)
       .attr('viewBox', [0, 0, width, height]);
 
+    // Определение маркера для стрелок
+    svg.append('defs').append('marker')
+      .attr('id', 'arrowhead')
+      .attr('viewBox', '-0 -5 10 10') // Координаты маркера
+      .attr('refX', 15) // Смещение маркера от конца линии (зависит от радиуса узла)
+      .attr('refY', 0)
+      .attr('orient', 'auto')
+      .attr('markerWidth', 6) // Размер стрелки
+      .attr('markerHeight', 6)
+      .attr('xoverflow', 'visible')
+      .append('svg:path')
+      .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+      .attr('fill', '#6B7280') // Цвет стрелки (серый для светлой темы)
+      .style('stroke','none');
+
     // Создаем симуляцию
     const simulation = d3.forceSimulation(nodes as d3.SimulationNodeDatum[])
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance(100))
@@ -102,12 +117,12 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
     const g = svg.append('g');
 
     // Добавляем связи
-    const link = g.append('g')
+    const link = svg.append('g')
+      .attr('stroke', '#999')
+      .attr('stroke-opacity', 0.6)
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#999')
-      .attr('stroke-opacity', 0.6)
       .attr('stroke-width', 1);
 
     // Добавляем узлы

@@ -140,48 +140,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --background: 0 0% 100%; /* White */
+    --foreground: 220 10% 15%; /* Dark Gray (was very dark desaturated blue) */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 10% 15%; /* Dark Gray */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 220 10% 15%; /* Dark Gray */
+    --primary: 221.2 83.2% 53.3%; /* Bright Blue (no change) */
+    --primary-foreground: 210 40% 98%; /* Almost White (no change) */
+    --secondary: 210 25% 94%; /* Light Gray (was very light gray) */
+    --secondary-foreground: 220 10% 15%; /* Dark Gray */
+    --muted: 210 25% 94%; /* Light Gray (was very light gray) */
+    --muted-foreground: 210 10% 45%; /* Medium Gray (was medium bluish gray) */
+    --accent: 210 30% 92%; /* Slightly more pronounced Light Gray (was very light gray) */
+    --accent-foreground: 220 10% 15%; /* Dark Gray */
+    --destructive: 0 75% 55%; /* Slightly less intense Red */
+    --destructive-foreground: 0 0% 100%; /* White (was very light gray) */
+    --border: 210 25% 90%; /* Light Gray (was very light gray) */
+    --input: 210 25% 90%; /* Light Gray (was very light gray) */
+    --ring: 220 90% 70%; /* Lighter Pastel Blue (was bright blue) */
+    --radius: 0.75rem; /* No change */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --background: 220 25% 8%; /* Very Dark Gray-Blue */
+    --foreground: 210 40% 98%; /* Almost White (no change) */
+    --card: 220 20% 12%; /* Dark Gray-Blue (lighter than background) */
+    --card-foreground: 210 40% 98%; /* Almost White (no change) */
+    --popover: 220 20% 13%; /* Dark Gray-Blue (similar to card) */
+    --popover-foreground: 210 40% 98%; /* Almost White (no change) */
+    --primary: 215 80% 65%; /* Softer, Vibrant Blue */
+    --primary-foreground: 210 40% 98%; /* Almost White (was dark) */
+    --secondary: 220 15% 20%; /* Dark Gray-Blue */
+    --secondary-foreground: 210 40% 98%; /* Almost White (no change) */
+    --muted: 220 15% 20%; /* Dark Gray-Blue (same as secondary) */
+    --muted-foreground: 210 15% 60%; /* Medium Light Gray */
+    --accent: 220 15% 25%; /* Slightly Lighter Dark Gray-Blue (for hover) */
+    --accent-foreground: 210 40% 98%; /* Almost White (no change) */
+    --destructive: 0 70% 50%; /* Brighter Red */
+    --destructive-foreground: 210 40% 98%; /* Almost White (no change) */
+    --border: 220 15% 22%; /* Dark Gray-Blue (lighter than card) */
+    --input: 220 20% 12%; /* Dark Gray-Blue (same as card, relies on border) */
+    --ring: 215 70% 75%; /* Lighter Shade of Primary Blue */
   }
 }
 
