@@ -5,16 +5,16 @@ import * as d3 from 'd3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Network, ZoomIn, ZoomOut, RotateCcw, Eye, EyeOff, Maximize2, FileText, Code, GitBranch, Settings, Filter } from 'lucide-react';
+import { Network, RotateCcw, Eye, EyeOff, Maximize2, FileText, Code, GitBranch, Settings, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface ProjectData {
   files: Array<{
     path: string;
-    name: string;
-    type: string;
+    name?: string;
+    type?: string;
     size: number;
     lines_of_code?: number;
-    functions: string[];
+    functions?: string[];
     imports?: string[];
     exports?: string[];
     complexity?: number;
@@ -64,6 +64,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
   const [showLabels, setShowLabels] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Enhanced color schemes for different file types and relationships
   const getNodeColor = useCallback((node: Node) => {
@@ -79,7 +80,14 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       'json': '#292929',
       'md': '#083fa1',
       'config': '#f59e0b',
-      'test': '#10b981'
+      'test': '#10b981',
+      'react': '#61dafb',
+      'vue': '#42b983',
+      'angular': '#dd0031',
+      'node': '#68a063',
+      'express': '#259dff',
+      'django': '#092e20',
+      'flask': '#000000'
     };
     
     // Determine node category for more sophisticated coloring
@@ -89,8 +97,54 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
     if (node.name && (node.name.includes('config') || node.name.includes('.config.'))) {
       return colorMap.config;
     }
+    if (node.name && node.name.toLowerCase().includes('react')) {
+      return colorMap.react;
+    }
+    if (node.name && node.name.toLowerCase().includes('vue')) {
+      return colorMap.vue;
+    }
+    if (node.name && node.name.toLowerCase().includes('angular')) {
+      return colorMap.angular;
+    }
+    if (node.name && node.name.toLowerCase().includes('node')) {
+      return colorMap.node;
+    }
+    if (node.name && node.name.toLowerCase().includes('express')) {
+      return colorMap.express;
+    }
+    if (node.name && node.name.toLowerCase().includes('django')) {
+      return colorMap.django;
+    }
+    if (node.name && node.name.toLowerCase().includes('flask')) {
+      return colorMap.flask;
+    }
     
     return colorMap[node.type] || '#64748b';
+  }, []);
+
+  const getNodeIcon = useCallback((type: string) => {
+    const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+      'ts': Code,
+      'tsx': Code,
+      'js': Code,
+      'jsx': Code,
+      'py': FileText,
+      'css': FileText,
+      'scss': FileText,
+      'html': FileText,
+      'json': FileText,
+      'md': FileText,
+      'config': Settings,
+      'test': Eye,
+      'react': Code,
+      'vue': Code,
+      'angular': Code,
+      'node': GitBranch,
+      'express': GitBranch,
+      'django': GitBranch,
+      'flask': GitBranch
+    };
+    return iconMap[type] || FileText;
   }, []);
 
   const getNodeSize = useCallback((node: Node) => {
@@ -130,14 +184,14 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .filter(file => filterType === 'all' || file.type === filterType)
       .map(file => ({
         id: file.path,
-        name: file.name,
-        type: file.type,
+        name: file.name || 'Unnamed',
+        type: file.type || 'unknown',
         size: file.lines_of_code || 10,
-        group: file.type,
+        group: file.type || 'unknown',
         lines: file.lines_of_code,
-        functions: file.functions,
-        imports: file.imports,
-        exports: file.exports,
+        functions: file.functions || [],
+        imports: file.imports || [],
+        exports: file.exports || [],
         complexity: file.complexity || 1
       }));
 
@@ -248,17 +302,11 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
     const nodeContainer = visualizationGroup.append('g').attr('class', 'nodes');
     
     const nodeElements = nodeContainer
-      .selectAll('circle')
+      .selectAll('g')
       .data(nodes)
-      .join('circle')
-      .attr('r', d => getNodeSize(d))
-      .attr('fill', d => getNodeColor(d))
-      .attr('stroke', '#ffffff')
-      .attr('stroke-width', 2)
-      .style('cursor', 'pointer')
-      .style('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))')
+      .join('g')
       // @ts-ignore - TypeScript issue with D3 drag types
-      .call(d3.drag<SVGCircleElement, Node, unknown>()
+      .call(d3.drag<SVGGElement, Node, unknown>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           (d as Node).fx = (d as Node).x;
@@ -273,13 +321,31 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           (d as Node).fx = null;
           (d as Node).fy = null;
         })
-      );
+      )
+      .style('cursor', 'pointer');
+
+    // Add node circles
+    nodeElements.append('circle')
+      .attr('r', d => getNodeSize(d))
+      .attr('fill', d => getNodeColor(d))
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 2)
+      .style('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))');
+
+    // Add node icons (simplified as text here, can be replaced with actual icons)
+    nodeElements.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('fill', 'white')
+      .text(d => d.type.slice(0, 2).toUpperCase())
+      .style('font-size', '8px')
+      .style('pointer-events', 'none');
 
     // Add interactive hover effects that provide immediate visual feedback
     nodeElements
       .on('mouseover', function(event, d) {
         // Highlight the current node and its connections
-        d3.select(this)
+        d3.select(this).select('circle')
           .transition()
           .duration(200)
           .attr('stroke-width', 4)
@@ -328,7 +394,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       })
       .on('mouseout', function(event, d) {
         // Reset visual states when hover ends
-        d3.select(this)
+        d3.select(this).select('circle')
           .transition()
           .duration(200)
           .attr('stroke-width', 2)
@@ -404,8 +470,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
 
       // Update node positions
       nodeElements
-        .attr('cx', d => d.x!)
-        .attr('cy', d => d.y!);
+        .attr('transform', d => `translate(${d.x! - getNodeSize(d)/2}, ${d.y! - getNodeSize(d)/2})`);
 
       // Update label positions to follow their corresponding nodes
       labelElements
@@ -459,12 +524,12 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 <Network className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl text-gradient">
-                  Граф зависимостей проекта
-                </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400">
-                  Интерактивная визуализация архитектуры и связей между компонентами
-                </CardDescription>
+              <CardTitle className="text-xl text-white font-bold">
+                Граф знаний проекта
+              </CardTitle>
+              <CardDescription className="text-slate-200 font-medium">
+                Интерактивная визуализация архитектуры и связей между компонентами
+              </CardDescription>
               </div>
             </div>
             
@@ -476,7 +541,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 onClick={() => setShowLabels(!showLabels)}
                 className="glass border-white/20 hover:bg-white/10"
               >
-                {showLabels ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showLabels ? <Eye className="h-4 w-4 text-white" /> : <EyeOff className="h-4 w-4 text-white" />}
               </Button>
               
               <Button
@@ -485,7 +550,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 onClick={() => setIsFullscreen(!isFullscreen)}
                 className="glass border-white/20 hover:bg-white/10"
               >
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="h-4 w-4 text-white" />
               </Button>
               
               <Button
@@ -494,7 +559,16 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 onClick={resetZoom}
                 className="glass border-white/20 hover:bg-white/10"
               >
-                <RotateCcw className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4 text-white" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="glass border-white/20 hover:bg-white/10"
+              >
+                {isSidebarOpen ? <ChevronRight className="h-4 w-4 text-white" /> : <ChevronLeft className="h-4 w-4 text-white" />}
               </Button>
             </div>
           </div>
@@ -503,24 +577,24 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
         <CardContent className="pt-0">
           {/* Enhanced Project Statistics and File Type Filters */}
           <div className="flex flex-wrap gap-4 mb-6">
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <FileText className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-sm text-slate-200">
+              <FileText className="h-4 w-4 text-blue-400" />
               <span className="font-medium">{data.metrics.total_files} файлов</span>
             </div>
             
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <Code className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-sm text-slate-200">
+              <Code className="h-4 w-4 text-green-400" />
               <span className="font-medium">{data.metrics.total_lines.toLocaleString()} строк</span>
             </div>
             
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <GitBranch className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-sm text-slate-200">
+              <GitBranch className="h-4 w-4 text-purple-400" />
               <span className="font-medium">{data.dependencies.length} связей</span>
             </div>
             
             {data.metrics.complexity_score && (
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                <Settings className="h-4 w-4" />
+              <div className="flex items-center gap-2 text-sm text-slate-200">
+                <Settings className="h-4 w-4 text-yellow-400" />
                 <span className="font-medium">Сложность: {data.metrics.complexity_score}</span>
               </div>
             )}
@@ -528,8 +602,8 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           
           {/* File Type Filters with Enhanced Design */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-              <Filter className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+              <Filter className="h-4 w-4 text-cyan-400" />
               Фильтр по типу:
             </div>
             
@@ -563,9 +637,9 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       </Card>
 
       {/* Main Visualization Container */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 relative">
         {/* Enhanced Graph Visualization */}
-        <Card className={`glass border-purple-500/20 ${selectedNode ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+        <Card className={`glass border-purple-500/20 ${isSidebarOpen ? 'col-span-1' : 'col-span-full'}`}>
           <CardContent className="p-0">
             <div className="relative">
               <svg 
@@ -576,24 +650,24 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
               
               {/* Zoom Level Indicator */}
               <div className="absolute top-4 left-4 glass rounded-lg px-3 py-1">
-                <span className="text-xs text-white font-medium">
-                  Масштаб: {Math.round(zoomLevel * 100)}%
-                </span>
+              <span className="text-xs text-white font-bold">
+                Масштаб: {Math.round(zoomLevel * 100)}%
+              </span>
               </div>
               
               {/* Interactive Help Overlay */}
               <div className="absolute bottom-4 left-4 glass rounded-lg p-3 max-w-xs">
-                <div className="text-xs text-slate-300 space-y-1">
+                <div className="text-xs text-slate-200 font-medium space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
                     <span>Перетаскивайте узлы для изменения расположения</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
                     <span>Кликните на узел для подробной информации</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                     <span>Используйте колесо мыши для масштабирования</span>
                   </div>
                 </div>
@@ -602,10 +676,10 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           </CardContent>
         </Card>
 
-        {/* Enhanced File Information Panel */}
-        {selectedNode && (
-          <Card className="glass border-cyan-500/20 lg:col-span-1">
-            <CardHeader className="pb-4">
+        {/* Enhanced File Information Sidebar */}
+        {selectedNode && isSidebarOpen && (
+          <Card className="glass border-cyan-500/20 col-span-1 lg:col-span-1 max-w-xs absolute right-0 top-0 h-full overflow-y-auto shadow-xl z-10">
+            <CardHeader className="pb-4 bg-slate-800/50">
               <div className="flex items-center gap-3">
                 <div 
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -614,30 +688,38 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                   <FileText className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-sm font-medium truncate">
+                  <CardTitle className="text-sm font-medium truncate text-white">
                     {selectedNode.name}
                   </CardTitle>
-                  <CardDescription className="text-xs">
+                  <CardDescription className="text-xs text-slate-300">
                     {selectedNode.type.toUpperCase()} файл
                   </CardDescription>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedNode(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               {/* File Metrics */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Строк кода:</span>
-                  <Badge variant="secondary" className="font-mono">
+                  <span className="text-sm text-slate-300">Строк кода:</span>
+                  <Badge variant="secondary" className="font-mono bg-slate-700 text-slate-200">
                     {selectedNode.lines?.toLocaleString() || 0}
                   </Badge>
                 </div>
                 
                 {selectedNode.functions && selectedNode.functions.length > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Функций:</span>
-                    <Badge variant="outline">
+                    <span className="text-sm text-slate-300">Функций:</span>
+                    <Badge variant="outline" className="bg-slate-700 text-slate-200">
                       {selectedNode.functions.length}
                     </Badge>
                   </div>
@@ -645,9 +727,10 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
                 
                 {selectedNode.complexity && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Сложность:</span>
+                    <span className="text-sm text-slate-300">Сложность:</span>
                     <Badge 
                       variant={selectedNode.complexity > 5 ? "destructive" : "secondary"}
+                      className="bg-slate-700 text-slate-200"
                     >
                       {selectedNode.complexity}
                     </Badge>
@@ -658,21 +741,21 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
               {/* Function List */}
               {selectedNode.functions && selectedNode.functions.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                  <h4 className="text-sm font-medium mb-2 text-slate-200">
                     Функции ({selectedNode.functions.length}):
                   </h4>
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {selectedNode.functions.slice(0, 10).map((func, index) => (
                       <div 
                         key={index}
-                        className="text-xs font-mono bg-slate-100 dark:bg-slate-800 rounded px-2 py-1 truncate"
+                        className="text-xs font-mono bg-slate-800 rounded px-2 py-1 truncate text-slate-300"
                         title={func}
                       >
                         {func}
                       </div>
                     ))}
                     {selectedNode.functions.length > 10 && (
-                      <div className="text-xs text-slate-500 text-center pt-1">
+                      <div className="text-xs text-slate-400 text-center pt-1">
                         +{selectedNode.functions.length - 10} больше...
                       </div>
                     )}
@@ -683,21 +766,21 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
               {/* Import/Export Information */}
               {selectedNode.imports && selectedNode.imports.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                  <h4 className="text-sm font-medium mb-2 text-slate-200">
                     Импорты ({selectedNode.imports.length}):
                   </h4>
                   <div className="space-y-1 max-h-24 overflow-y-auto">
                     {selectedNode.imports.slice(0, 5).map((imp, index) => (
                       <div 
                         key={index}
-                        className="text-xs font-mono bg-blue-50 dark:bg-blue-900/20 rounded px-2 py-1 truncate"
-                        title={imp}
+                        className="text-xs font-mono bg-blue-900/20 rounded px-2 py-1 truncate text-slate-300"
+                        title={imp || 'Unnamed Import'}
                       >
-                        {imp}
+                        {imp || 'Unnamed Import'}
                       </div>
                     ))}
                     {selectedNode.imports.length > 5 && (
-                      <div className="text-xs text-slate-500 text-center pt-1">
+                      <div className="text-xs text-slate-400 text-center pt-1">
                         +{selectedNode.imports.length - 5} больше...
                       </div>
                     )}
@@ -707,10 +790,10 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
               
               {/* File Path */}
               <div>
-                <h4 className="text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                <h4 className="text-sm font-medium mb-2 text-slate-200">
                   Путь к файлу:
                 </h4>
-                <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 rounded p-2 break-all">
+                <div className="text-xs font-mono bg-slate-800 rounded p-2 break-all text-slate-300">
                   {selectedNode.id}
                 </div>
               </div>

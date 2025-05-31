@@ -71,25 +71,25 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {analysisResult.metrics.total_files}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">Файлов</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {analysisResult.metrics.total_lines.toLocaleString()}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">Строк кода</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                     {analysisResult.metrics.total_functions}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">Функций</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                     {Math.round(analysisResult.metrics.avg_lines_per_file)}
                   </div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">Строк/файл</div>
@@ -99,10 +99,10 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
               {/* Languages and Patterns */}
               <div className="mt-6 space-y-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Языки программирования:</h4>
+                  <h4 className="font-semibold mb-2 text-slate-700 dark:text-slate-300">Языки программирования:</h4>
                   <div className="flex flex-wrap gap-2">
                     {analysisResult.metrics.languages.map((lang) => (
-                      <Badge key={lang} variant="secondary">
+                      <Badge key={lang} variant="secondary" className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
                         {lang}
                       </Badge>
                     ))}
@@ -111,10 +111,10 @@ export function AnalysisResults({ analysisResult, setAnalysisResult }: AnalysisR
 
                 {analysisResult.architecture_patterns.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-2">Архитектурные паттерны:</h4>
+                    <h4 className="font-semibold mb-2 text-slate-700 dark:text-slate-300">Архитектурные паттерны:</h4>
                     <div className="flex flex-wrap gap-2">
                       {analysisResult.architecture_patterns.map((pattern) => (
-                        <Badge key={pattern} variant="outline">
+                        <Badge key={pattern} variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
                           {pattern}
                         </Badge>
                       ))}
