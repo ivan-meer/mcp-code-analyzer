@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import os
+import ast # For Python AST parsing
+import re # For JSDoc regex parsing
 import json
 import sqlite3
 from pathlib import Path
@@ -21,6 +23,26 @@ from ai_services import (
 )
 
 # Модели данных
+
+# Documentation Models
+class DocFunctionParam(BaseModel):
+    name: str
+    type: Optional[str] = None
+    description: Optional[str] = None
+
+class DocFunction(BaseModel):
+    name: str
+    description: Optional[str] = None
+    params: List[DocFunctionParam] = Field(default_factory=list)
+    returns: Optional[Dict[str, Optional[str]]] = None # e.g., {"type": "str", "description": "..."}
+    line_start: Optional[int] = None
+    line_end: Optional[int] = None
+
+class DocFile(BaseModel):
+    file_path: str
+    functions: List[DocFunction] = Field(default_factory=list)
+
+# Main Models
 class ProjectAnalysisRequest(BaseModel):
     path: str
     include_tests: bool = True
@@ -32,8 +54,10 @@ class FileInfo(BaseModel):
     type: str
     size: int
     lines_of_code: Optional[int] = None
-    functions: List[str] = []
+    functions: List[str] = [] # Still keep simple list of function names for other uses
     imports: List[str] = []
+    todos: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    doc_details: Optional[List[DocFunction]] = Field(default_factory=list) # Parsed function documentation
 
 class ProjectAnalysisResult(BaseModel):
     project_path: str
@@ -41,6 +65,8 @@ class ProjectAnalysisResult(BaseModel):
     dependencies: List[Dict[str, Any]]
     metrics: Dict[str, Any]
     architecture_patterns: List[str]
+    all_todos: List[Dict[str, Any]] = Field(default_factory=list)
+    project_documentation: Optional[List[DocFile]] = Field(default_factory=list)
 
 class CodeExplanationRequest(BaseModel):
     code: str
@@ -146,6 +172,7 @@ class CodeAnalyzer:
     @staticmethod
     def analyze_file(file_path: str) -> FileInfo:
         """Анализ одного файла"""
+        import re # Ensure re is imported here
         path_obj = Path(file_path)
         
         if not path_obj.exists():
@@ -158,39 +185,133 @@ class CodeAnalyzer:
             size=path_obj.stat().st_size,
             lines_of_code=0,
             functions=[],
-            imports=[]
+            imports=[],
+            todos=[],
+            doc_details=[]
         )
         
-        # Анализ содержимого для JS/TS/Python файлов
-        if path_obj.suffix in ['.js', '.ts', '.tsx', '.jsx', '.py']:
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    file_info.lines_of_code = len(content.split('\n'))
+        # Regex patterns for TODOs, FIXMEs, HACKs
+        # Covers #, //, /* ... */, <!-- ... -->, """ ... """, ''' ... '''
+        todo_patterns = [
+            re.compile(r"#\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*)", re.IGNORECASE),
+            re.compile(r"//\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*)", re.IGNORECASE),
+            re.compile(r"/\*\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*?)\s*\*/", re.IGNORECASE | re.DOTALL),
+            re.compile(r"<!--\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*?)\s*-->", re.IGNORECASE | re.DOTALL),
+            # Python docstrings (multiline) - basic check, might need refinement for perfect parsing
+            re.compile(r"\"\"\"\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*?)\s*\"\"\"", re.IGNORECASE | re.DOTALL),
+            re.compile(r"'''\s*(TODO|FIXME|HACK)\s*[:\-]\s*(.*?)\s*'''", re.IGNORECASE | re.DOTALL),
+        ]
+
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content_lines = f.readlines()
+                file_info.lines_of_code = len(content_lines)
+
+                full_content = "".join(content_lines)
+
+                # Scan for TODOs/FIXMEs
+                # For line-by-line comments (#, //)
+                for i, line_text in enumerate(content_lines):
+                    for pattern in todo_patterns[:2]: # Only line comment patterns
+                        match = pattern.search(line_text)
+                        if match:
+                            file_info.todos.append({
+                                "line": i + 1,
+                                "type": match.group(1).upper(),
+                                "content": match.group(2).strip(),
+                                "priority": None # Placeholder for future enhancement
+                            })
+
+                # For block comments (/* ... */, <!-- ... -->, """...""", '''...''')
+                # These need to be searched in the full content, line numbers are approximations (start of match)
+                for pattern in todo_patterns[2:]:
+                    for match in pattern.finditer(full_content):
+                        start_char_index = match.start()
+                        # Approximate line number
+                        line_num = full_content.count('\n', 0, start_char_index) + 1
+                        file_info.todos.append({
+                            "line": line_num,
+                            "type": match.group(1).upper(),
+                            "content": match.group(2).strip().replace('\n', ' '), # Flatten multiline content
+                            "priority": None
+                        })
+
+                # Existing analysis for functions and imports
+                if path_obj.suffix in ['.js', '.ts', '.tsx', '.jsx']:
+                    functions = re.findall(r'function\s+(\w+)|const\s+(\w+)\s*=.*?=>|(\w+)\s*:\s*\([^)]*\)\s*=>', full_content)
+                    file_info.functions = [f for func_group in functions for f in func_group if f]
+                    imports = re.findall(r'import.*?from\s+[\'"]([^\'"]+)[\'"]', full_content)
+                    file_info.imports = imports
+
+                elif path_obj.suffix == '.py':
+                    functions = re.findall(r'def\s+(\w+)', full_content)
+                    file_info.functions = functions
+                    imports = re.findall(r'from\s+(\S+)\s+import|import\s+(\S+)', full_content)
+                    file_info.imports = [imp for imp_group in imports for imp in imp_group if imp]
                     
-                    # Простой поиск функций (можно улучшить)
-                    if path_obj.suffix in ['.js', '.ts', '.tsx', '.jsx']:
-                        # JavaScript/TypeScript функции
-                        import re
-                        functions = re.findall(r'function\s+(\w+)|const\s+(\w+)\s*=.*?=>|(\w+)\s*:\s*\([^)]*\)\s*=>', content)
-                        file_info.functions = [f for func_group in functions for f in func_group if f]
+                    # Python Docstring Parsing using AST
+                    try:
+                        tree = ast.parse(full_content, filename=file_path)
+                        for node in ast.walk(tree):
+                            if isinstance(node, ast.FunctionDef):
+                                docstring = ast.get_docstring(node)
+                                parsed_function = DocFunction(name=node.name, line_start=node.lineno, line_end=node.end_lineno)
+                                if docstring:
+                                    # Simple parsing for now, can be expanded
+                                    lines = [line.strip() for line in docstring.split('\n')]
+                                    parsed_function.description = lines[0] if lines else None
+
+                                    param_matches = re.finditer(r":param\s+(?:([\w\s]+)\s*:\s*)?(\w+)\s*:(.*)", docstring) # :param type name: desc or :param name: desc
+                                    for match in param_matches:
+                                        param_type, param_name, param_desc = match.groups()
+                                        parsed_function.params.append(DocFunctionParam(name=param_name.strip(), type=param_type.strip() if param_type else None, description=param_desc.strip()))
+
+                                    return_match = re.search(r":return(?:s)?\s*(?:([\w\s\[\],\|]+)\s*:\s*)?(.*)|:rtype:\s*([\w\s\[\],\|]+)", docstring, re.DOTALL) # :return type: desc or :returns: desc or :rtype: type
+                                    if return_match:
+                                        g = return_match.groups()
+                                        # g[0] is type from :return type:, g[1] is desc from :return ...: desc, g[2] is type from :rtype:
+                                        return_type = g[0] or g[2]
+                                        return_desc = g[1]
+                                        parsed_function.returns = {"type": return_type.strip() if return_type else None, "description": return_desc.strip() if return_desc else None}
+                                file_info.doc_details.append(parsed_function)
+                    except Exception as e:
+                        print(f"Error parsing Python AST for {file_path}: {e}")
+
+                elif path_obj.suffix in ['.js', '.ts', '.tsx', '.jsx']:
+                    # JSDoc Parsing (Simplified Regex)
+                    # This regex is basic and may need significant improvement for complex cases or various JSDoc styles.
+                    # It tries to find a JSDoc block and the function/method name that follows it.
+                    jsdoc_func_pattern = re.compile(
+                        r"/\*\*(.*?)\*/\s*(?:export\s+)?(?:async\s+)?(?:function\s*(?P<funcName1>\w+)\s*\(|const\s+(?P<funcName2>\w+)\s*=\s*(?:async)?\s*\(|(?P<methodName>\w+)\s*\([^)]*\)\s*\{)",
+                        re.DOTALL | re.MULTILINE
+                    )
+                    for match in jsdoc_func_pattern.finditer(full_content):
+                        jsdoc_content = match.group(1)
+                        func_name = match.group('funcName1') or match.group('funcName2') or match.group('methodName')
+                        if not func_name: continue
+
+                        parsed_function = DocFunction(name=func_name)
                         
-                        # Импорты
-                        imports = re.findall(r'import.*?from\s+[\'"]([^\'"]+)[\'"]', content)
-                        file_info.imports = imports
-                    
-                    elif path_obj.suffix == '.py':
-                        # Python функции
-                        import re
-                        functions = re.findall(r'def\s+(\w+)', content)
-                        file_info.functions = functions
+                        desc_match = re.search(r"@description\s+([^\n@]+)|([^\n@]+)", jsdoc_content, re.DOTALL) # First non-tag line or @description
+                        if desc_match:
+                            parsed_function.description = (desc_match.group(1) or desc_match.group(2) or "").strip()
+
+                        for param_match in re.finditer(r"@param\s+\{(.*?)\}\s+(\w+)\s*(?:-\s*(.*?))?\s*(?=\n|\@)", jsdoc_content, re.DOTALL):
+                            param_type, param_name, param_desc = param_match.groups()
+                            parsed_function.params.append(DocFunctionParam(name=param_name.strip(), type=param_type.strip(), description=(param_desc or "").strip()))
                         
-                        # Импорты
-                        imports = re.findall(r'from\s+(\S+)\s+import|import\s+(\S+)', content)
-                        file_info.imports = [imp for imp_group in imports for imp in imp_group if imp]
+                        returns_match = re.search(r"@returns?\s+\{(.*?)\}\s*(.*)|@returns?\s+(.*)", jsdoc_content, re.DOTALL)
+                        if returns_match:
+                            g = returns_match.groups()
+                            # g[0] is type from {@type}, g[1] is desc from {@type} desc, g[2] is desc from @returns desc
+                            return_type = g[0]
+                            return_desc = g[1] or g[2]
+                            parsed_function.returns = {"type": return_type.strip() if return_type else None, "description": return_desc.strip() if return_desc else None}
                         
-            except Exception as e:
-                print(f"Error analyzing file {file_path}: {e}")
+                        file_info.doc_details.append(parsed_function)
+
+        except Exception as e:
+            print(f"Error analyzing file content for {file_path}: {e}")
         
         return file_info
     
@@ -218,14 +339,34 @@ class CodeAnalyzer:
                 except Exception as e:
                     print(f"Error analyzing {file_path}: {e}")
         
-        # Строим граф зависимостей
+        # Строим граф зависимостей, собираем все TODOs и документацию
+        all_project_todos = []
+        project_docs_list: List[DocFile] = []
+
         for file_info in files:
+            # Dependencies
             for import_path in file_info.imports:
                 dependencies.append({
                     "from": file_info.path,
                     "to": import_path,
                     "type": "import"
                 })
+            # Aggregate TODOs
+            if file_info.todos:
+                for todo in file_info.todos:
+                    all_project_todos.append({
+                        "file_path": file_info.path,
+                        "line": todo["line"],
+                        "type": todo["type"],
+                        "content": todo["content"],
+                        "priority": todo.get("priority")
+                    })
+            # Aggregate Documentation
+            if file_info.doc_details and len(file_info.doc_details) > 0:
+                project_docs_list.append(DocFile(
+                    file_path=file_info.path,
+                    functions=file_info.doc_details
+                ))
         
         # Вычисляем метрики
         total_lines = sum(f.lines_of_code or 0 for f in files)
@@ -253,7 +394,9 @@ class CodeAnalyzer:
             files=files,
             dependencies=dependencies,
             metrics=metrics,
-            architecture_patterns=patterns
+            architecture_patterns=patterns,
+            all_todos=all_project_todos,
+            project_documentation=project_docs_list
         )
 
 # API Endpoints
