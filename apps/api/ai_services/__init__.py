@@ -51,7 +51,7 @@ from .ai_manager import (
     AIServiceFactory,
     AIProvider,
     TaskType,
-    ai_manager,
+    ai_manager_instance, # Changed from ai_manager
     initialize_ai_services,
     get_ai_manager
 )
@@ -75,7 +75,7 @@ __all__ = [
     "TaskType",
     
     # Глобальные функции и объекты
-    "ai_manager",
+    "ai_manager_instance", # Changed from ai_manager
     "initialize_ai_services", 
     "get_ai_manager"
 ]

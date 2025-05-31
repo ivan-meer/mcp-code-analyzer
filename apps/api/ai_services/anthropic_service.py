@@ -159,6 +159,8 @@ class AnthropicService(BaseAIService):
         }
         
         # Оценка токенов (Claude использует другую систему подсчета)
+        # TODO: Research and integrate official Anthropic client-side token counting if available.
+        # Current estimation is a heuristic (len // 3).
         estimated_tokens = (len(system_message) + len(user_message)) // 3
         max_tokens = self.max_tokens_by_model.get(self.model_name, 200000)
         
