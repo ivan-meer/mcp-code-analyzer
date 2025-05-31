@@ -30,7 +30,9 @@ export function AIStatusCard() {
   const fetchAIStatus = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ai-status');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      console.log('AIStatusCard fetch url:', `${apiUrl}/api/ai-status`);
+      const response = await fetch(`${apiUrl}/api/ai-status`);
       if (response.ok) {
         const data = await response.json();
         setAiStatus(data);
@@ -191,11 +193,11 @@ export function AIStatusCard() {
         )}
 
         {/* Общая статистика */}
-        {aiStatus?.total_requests > 0 && (
+        {(aiStatus?.total_requests ?? 0) > 0 && (
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="text-2xl font-bold text-blue-600">
-                {aiStatus.total_requests}
+                {aiStatus?.total_requests ?? 0}
               </div>
               <div className="text-sm text-blue-600/80">
                 Всего запросов
@@ -203,7 +205,7 @@ export function AIStatusCard() {
             </div>
             <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {aiStatus.total_tokens.toLocaleString()}
+                {(aiStatus?.total_tokens ?? 0).toLocaleString()}
               </div>
               <div className="text-sm text-green-600/80">
                 Всего токенов
