@@ -104,6 +104,9 @@ export default function HomePage() {
     setError(null);
     setShowDemo(false);
 
+    // Очистка пути от лишних пробелов и дублирований
+    const cleanedPath = projectPath.trim().replace(/\s+/g, ' ').split(' ')[0];
+
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -111,7 +114,7 @@ export default function HomePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          path: projectPath,
+          path: cleanedPath,
           include_tests: true,
           analysis_depth: 'medium'
         }),
@@ -285,16 +288,8 @@ export default function HomePage() {
                 </Card>
               </div>
               
-              {/* Enhanced Visualization */}
+              {/* Enhanced Visualization with Knowledge Graph */}
               <ProjectVisualization data={analysisResult} />
-              
-              {/* Additional Analysis Components */}
-              <div className="mt-8">
-                <AnalysisResults 
-                  analysisResult={analysisResult} 
-                  setAnalysisResult={setAnalysisResult} 
-                />
-              </div>
             </div>
           </div>
         )}
