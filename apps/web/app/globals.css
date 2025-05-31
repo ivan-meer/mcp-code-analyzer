@@ -2,6 +2,142 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced Color System for MCP Code Analyzer */
+:root {
+  /* Primary Purple Gradient */
+  --primary-50: #faf5ff;
+  --primary-100: #f3e8ff;
+  --primary-200: #e9d5ff;
+  --primary-300: #d8b4fe;
+  --primary-400: #c084fc;
+  --primary-500: #a855f7;
+  --primary-600: #9333ea;
+  --primary-700: #7c3aed;
+  --primary-800: #6b21a8;
+  --primary-900: #581c87;
+
+  /* Accent Colors for File Types */
+  --accent-typescript: #3178c6;
+  --accent-javascript: #f7df1e;
+  --accent-react: #61dafb;
+  --accent-python: #3776ab;
+  --accent-css: #1572b6;
+  --accent-html: #e34f26;
+  --accent-json: #000000;
+  --accent-markdown: #083fa1;
+
+  /* Semantic Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* Graph Colors */
+  --graph-node-core: #9333ea;
+  --graph-node-component: #06b6d4;
+  --graph-node-utility: #10b981;
+  --graph-node-config: #f59e0b;
+  --graph-link-import: #8b5cf6;
+  --graph-link-export: #06b6d4;
+  --graph-link-dependency: #64748b;
+
+  /* Glass morphism effects */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Dark theme adjustments */
+.dark {
+  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-border: rgba(148, 163, 184, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Custom gradient backgrounds */
+.gradient-purple {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-mesh {
+  background: 
+    radial-gradient(circle at 25% 25%, #9333ea 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, #06b6d4 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #7c3aed 0%, transparent 50%);
+}
+
+/* Glass morphism utility classes */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Enhanced animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-10px) rotate(1deg); }
+  66% { transform: translateY(5px) rotate(-1deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(147, 51, 234, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes data-flow {
+  0% { 
+    stroke-dashoffset: 100;
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% { 
+    stroke-dashoffset: 0;
+    opacity: 0.3;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-data-flow {
+  stroke-dasharray: 10 5;
+  animation: data-flow 2s linear infinite;
+}
+
+/* Typography enhancements */
+.text-gradient {
+  background: linear-gradient(135deg, #9333ea, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Interactive hover effects */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

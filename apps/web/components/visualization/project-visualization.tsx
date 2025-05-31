@@ -79,7 +79,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .attr('viewBox', [0, 0, width, height]);
 
     // Создаем симуляцию
-    const simulation = d3.forceSimulation(nodes)
+    const simulation = d3.forceSimulation(nodes as d3.SimulationNodeDatum[])
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance(100))
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2));
@@ -89,43 +89,59 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .domain(['ts', 'tsx', 'js', 'jsx', 'py', 'css', 'html', 'json'])
       .range(['#3178c6', '#61dafb', '#f7df1e', '#61dafb', '#3776ab', '#1572b6', '#e34f26', '#000000']);
 
+    // Добавляем масштабирование
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 8])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Создаем группу для элементов графа
+    const g = svg.append('g');
+
     // Добавляем связи
-    const link = svg.append('g')
-      .attr('stroke', '#999')
-      .attr('stroke-opacity', 0.6)
+    const link = g.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
+      .attr('stroke', '#999')
+      .attr('stroke-opacity', 0.6)
       .attr('stroke-width', 1);
 
     // Добавляем узлы
-    const node = svg.append('g')
+    const node = g.append('g')
       .selectAll('circle')
       .data(nodes)
       .join('circle')
-      .attr('r', (d: Node) => Math.max(5, Math.min(20, d.size / 20)))
-      .attr('fill', (d: Node) => colorScale(d.type) as string)
+      .attr('r', (d: Node) => Math.max(5, Math.min(20, d.size / 20))
+      .attr('fill', (d: Node) => { {
+        const color = colorScale(d.type);
+        return typeof color === 'string' ? color : '#cccccc';
+      })
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
       .style('cursor', 'pointer')
       .call(d3.drag<SVGCircleElement, Node>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
+          (d as any).fx = (d as any).x;
+          (d as any).fy = (d as any).y;
         })
         .on('drag', (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
+          (d as any).fx = event.x;
+          (d as any).fy = event.y;
         })
         .on('end', (event, d) => {
           if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }));
+          (d as any).fx = null;
+          (d as any).fy = null;
+        })
+      ));
 
     // Добавляем подписи
-    const label = svg.append('g')
+    const label = g.append('g')
       .selectAll('text')
       .data(nodes)
       .join('text')
