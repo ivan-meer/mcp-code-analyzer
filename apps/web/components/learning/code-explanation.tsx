@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomDark, prism as prismLight } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Import prism as prismLight
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +29,35 @@ export function CodeExplanation({
   const [patterns, setPatterns] = useState<string[]>([]);
   const [aiProvider, setAiProvider] = useState<string>('');
   const [confidenceScore, setConfidenceScore] = useState<number>(0);
+
+  // Determine theme for syntax highlighting
+  const { theme } = useTheme();
+  const syntaxHighlighterStyle = theme === 'dark' ? atomDark : prismLight;
+
+  const renderExplanation = (markdownText: string) => {
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    const parts = [];
+    let match;
+
+    while ((match = codeBlockRegex.exec(markdownText)) !== null) {
+      const [fullMatch, language, code] = match;
+      if (match.index > lastIndex) {
+        parts.push(markdownText.substring(lastIndex, match.index));
+      }
+      parts.push(
+        <SyntaxHighlighter key={lastIndex} language={language || 'bash'} style={syntaxHighlighterStyle}>
+          {code.trim()}
+        </SyntaxHighlighter>
+      );
+      lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex < markdownText.length) {
+      parts.push(markdownText.substring(lastIndex));
+    }
+    return parts.map((part, index) => <React.Fragment key={index}>{part}</React.Fragment>);
+  };
 
   const explainCode = async () => {
     if (!inputCode.trim()) return;
@@ -199,12 +231,8 @@ export function CodeExplanation({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              {explanation.split('\n').map((line, index) => (
-                <p key={index} className="mb-2">
-                  {line}
-                </p>
-              ))}
+            <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
+              {renderExplanation(explanation)}
             </div>
           </CardContent>
         </Card>
@@ -283,9 +311,9 @@ const result = numbers
                 onClick={() => setInputCode(example.code)}
               >
                 <div className="font-medium text-sm mb-1">{example.title}</div>
-                <code className="text-xs text-slate-600 dark:text-slate-400 block">
-                  {example.code.split('\n')[0]}...
-                </code>
+                <SyntaxHighlighter language="javascript" style={syntaxHighlighterStyle} customStyle={{ padding: '1em', borderRadius: '0.5em', maxHeight: '200px', overflowY: 'auto' }}>
+                  {example.code}
+                </SyntaxHighlighter>
               </div>
             ))}
           </div>
