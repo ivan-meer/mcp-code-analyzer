@@ -1,11 +1,16 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import * as ReactDOM from 'react-dom/client'; // Import ReactDOM
 import * as d3 from 'd3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Network, RotateCcw, Eye, EyeOff, Maximize2, FileText, Code, GitBranch, Settings, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
+import {
+  Network, RotateCcw, Eye, EyeOff, Maximize2, FileText, Code, GitBranch, Settings, Filter, ChevronRight, ChevronLeft,
+  Component, FileCode2, Database, Terminal, Settings2, Package, ListTree, Shell, FileQuestion, Braces, Coffee,
+  ClipboardCopy, Check, ChevronDown, ChevronUp // Added new icons for sidebar
+} from 'lucide-react';
 
 interface ProjectData {
   files: Array<{
@@ -66,85 +71,103 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  // State for sidebar enhancements
+  const [isFunctionsExpanded, setIsFunctionsExpanded] = useState(false);
+  const [isImportsExpanded, setIsImportsExpanded] = useState(false);
+  const [isExportsExpanded, setIsExportsExpanded] = useState(false);
+  const [pathCopied, setPathCopied] = useState(false);
+
+  const formatBytes = (bytes: number, decimals = 1) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
   // Enhanced color schemes for different file types and relationships
   const getNodeColor = useCallback((node: Node) => {
+    // Specific name matches first
+    if (node.name.toLowerCase() === 'dockerfile') return '#384D54';
+    if (node.name && (node.name.includes('test') || node.name.includes('spec'))) return '#10b981'; // Test green
+    if (node.name && (node.name.includes('config') || node.name.includes('.config.'))) return '#f59e0b'; // Generic config orange
+    // Keywords for primary technologies (can override type-based)
+    if (node.name && node.name.toLowerCase().includes('react')) return '#61dafb'; // React blue
+    if (node.name && node.name.toLowerCase().includes('vue')) return '#4FC08D';   // Vue green
+    if (node.name && node.name.toLowerCase().includes('angular')) return '#dd0031';// Angular red
+    // Backend framework keywords
+    if (node.name && node.name.toLowerCase().includes('node')) return '#68a063';    // Node green
+    if (node.name && node.name.toLowerCase().includes('express')) return '#259dff'; // Express blue
+    if (node.name && node.name.toLowerCase().includes('django')) return '#092e20';  // Django dark green
+    if (node.name && node.name.toLowerCase().includes('flask')) return '#333333';   // Flask dark gray
+
     const colorMap: { [key: string]: string } = {
-      'ts': '#3178c6',
-      'tsx': '#61dafb', 
-      'js': '#f7df1e',
-      'jsx': '#61dafb',
-      'py': '#3776ab',
-      'css': '#1572b6',
-      'scss': '#c6538c',
-      'html': '#e34f26',
-      'json': '#292929',
-      'md': '#083fa1',
-      'config': '#f59e0b',
-      'test': '#10b981',
-      'react': '#61dafb',
-      'vue': '#42b983',
-      'angular': '#dd0031',
-      'node': '#68a063',
-      'express': '#259dff',
-      'django': '#092e20',
-      'flask': '#000000'
+      'ts': '#3178c6',    // TypeScript blue
+      'tsx': '#61dafb',   // React blue (often TSX is React)
+      'js': '#f7df1e',    // JavaScript yellow
+      'jsx': '#61dafb',   // React blue (often JSX is React)
+      'py': '#3776ab',    // Python blue
+      'vue': '#4FC08D',  // Vue green
+      'java': '#f89820',  // Java orange
+      'cs': '#239120',    // C# green
+      'rb': '#CC342D',    // Ruby red
+      'go': '#00ADD8',    // Go blue
+      'swift': '#FFAC45', // Swift orange
+      'kt': '#7F52FF',    // Kotlin purple
+      'php': '#777BB4',   // PHP purple
+      'rs': '#DEA584',    // Rust orange
+      'yaml': '#CB171E',  // YAML red
+      'yml': '#CB171E',   // YAML red
+      'conf': '#009639',  // Nginx green (for .conf)
+      'sh': '#4EAA25',    // Shell green
+      'sql': '#CC2927',   // SQL/database red
+      'css': '#1572b6',   // CSS blue
+      'scss': '#c6538c',  // SCSS pink
+      'html': '#e34f26',  // HTML orange
+      'json': '#292929',  // JSON dark gray/black
+      'md': '#083fa1',    // Markdown blue
+      'config': '#f59e0b',// Generic config orange (fallback)
+      'test': '#10b981',  // Test green (fallback)
+      'dockerfile': '#384D54' // Docker blue/gray
     };
-    
-    // Determine node category for more sophisticated coloring
-    if (node.name && (node.name.includes('test') || node.name.includes('spec'))) {
-      return colorMap.test;
-    }
-    if (node.name && (node.name.includes('config') || node.name.includes('.config.'))) {
-      return colorMap.config;
-    }
-    if (node.name && node.name.toLowerCase().includes('react')) {
-      return colorMap.react;
-    }
-    if (node.name && node.name.toLowerCase().includes('vue')) {
-      return colorMap.vue;
-    }
-    if (node.name && node.name.toLowerCase().includes('angular')) {
-      return colorMap.angular;
-    }
-    if (node.name && node.name.toLowerCase().includes('node')) {
-      return colorMap.node;
-    }
-    if (node.name && node.name.toLowerCase().includes('express')) {
-      return colorMap.express;
-    }
-    if (node.name && node.name.toLowerCase().includes('django')) {
-      return colorMap.django;
-    }
-    if (node.name && node.name.toLowerCase().includes('flask')) {
-      return colorMap.flask;
-    }
-    
-    return colorMap[node.type] || '#64748b';
+    return colorMap[node.type] || '#64748b'; // Default slate gray
   }, []);
 
-  const getNodeIcon = useCallback((type: string) => {
+  const getNodeIcon = useCallback((type: string, name: string): React.ComponentType<{ className?: string }> => {
+    if (name.toLowerCase() === 'dockerfile') {
+      return Package;
+    }
     const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
-      'ts': Code,
-      'tsx': Code,
-      'js': Code,
-      'jsx': Code,
-      'py': FileText,
-      'css': FileText,
-      'scss': FileText,
-      'html': FileText,
-      'json': FileText,
+      'ts': FileCode2,
+      'tsx': Component,
+      'js': FileCode2,
+      'jsx': Component,
+      'py': FileCode2,
+      'vue': Component,
+      'java': Coffee,
+      'cs': FileCode2,
+      'rb': FileCode2,
+      'go': FileCode2,
+      'swift': FileCode2,
+      'kt': FileCode2,
+      'php': FileCode2,
+      'rs': Braces,
+      'yaml': ListTree,
+      'yml': ListTree,
+      'conf': Settings2,
+      'sh': FileTerminal,
+      'sql': Database,
+      'css': FileCode,
+      'scss': FileCode,
+      'html': Globe,
+      'json': FileJson,
       'md': FileText,
       'config': Settings,
       'test': Eye,
-      'react': Code,
-      'vue': Code,
-      'angular': Code,
-      'node': GitBranch,
-      'express': GitBranch,
-      'django': GitBranch,
-      'flask': GitBranch
+      'dockerfile': Package
     };
-    return iconMap[type] || FileText;
+    return iconMap[type] || FileQuestion; // Default to FileQuestion for unknown types
   }, []);
 
   const getNodeSize = useCallback((node: Node) => {
@@ -278,17 +301,18 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#ff0000') // Ярко-красный цвет для максимальной видимости
-      .attr('stroke-opacity', 1.0) // Максимальная непрозрачность
-      .attr('stroke-width', d => Math.sqrt((d.weight || 1) * 5)) // Значительно увеличена толщина линий
+      .attr('stroke', 'url(#linkGradient)') // Using gradient for links
+      .attr('stroke-opacity', 0.7) // Adjusted opacity for gradient
+      .attr('stroke-width', d => 1.5 + Math.sqrt((d.weight || 1) * 3)) // Adjusted thickness
       .attr('marker-end', 'url(#arrowhead)')
+      .classed('animate-data-flow', true) // Apply data flow animation class
       .style('cursor', 'pointer')
       .on('mouseover', function(event, d) {
         d3.select(this)
           .transition()
           .duration(200)
-          .attr('stroke-opacity', 1)
-          .attr('stroke-width', Math.sqrt((d.weight || 1) * 5) + 2);
+          .attr('stroke-opacity', 0.9) // Slightly more opaque on hover
+          .attr('stroke-width', (1.5 + Math.sqrt((d.weight || 1) * 3)) + 2);
         
         // Highlight connected nodes
         nodeElements
@@ -327,8 +351,8 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
         d3.select(this)
           .transition()
           .duration(200)
-          .attr('stroke-opacity', 1.0)
-          .attr('stroke-width', Math.sqrt((d.weight || 1) * 5));
+          .attr('stroke-opacity', 0.7) // Restore original opacity
+          .attr('stroke-width', 1.5 + Math.sqrt((d.weight || 1) * 3)); // Restore original thickness
         
         nodeElements
           .transition()
@@ -382,18 +406,43 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
     nodeElements.append('circle')
       .attr('r', d => getNodeSize(d))
       .attr('fill', d => getNodeColor(d))
-      .attr('stroke', '#ffffff')
-      .attr('stroke-width', 2)
-      .style('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))');
+      .attr('stroke', d => d3.color(getNodeColor(d))?.darker(0.5).toString() || '#ffffff') // Darker border
+      .attr('stroke-width', 1.5) // Adjusted stroke width
+      .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'); // Adjusted shadow
 
-    // Add node icons (simplified as text here, can be replaced with actual icons)
-    nodeElements.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '0.35em')
-      .attr('fill', 'white')
-      .text(d => d.type.slice(0, 2).toUpperCase())
-      .style('font-size', '8px')
-      .style('pointer-events', 'none');
+
+    // Add node icons using foreignObject
+    const iconSizePercentage = 0.7; // % of node radius for icon size
+    nodeElements.select('foreignObject').remove(); // Clear existing foreignObjects if any during re-render
+
+    nodeElements.append('foreignObject')
+      .attr('width', d => getNodeSize(d) * iconSizePercentage * 2)
+      .attr('height', d => getNodeSize(d) * iconSizePercentage * 2)
+      .attr('x', d => -(getNodeSize(d) * iconSizePercentage)) // Center the foreignObject
+      .attr('y', d => -(getNodeSize(d) * iconSizePercentage)) // Center the foreignObject
+      .style('pointer-events', 'none')
+      .each(function(dNode) { // Use 'each' to operate on each foreignObject
+        const foreignObject = this;
+        // Ensure the container div exists or create it
+        let iconContainer = foreignObject.querySelector('div');
+        if (!iconContainer) {
+          iconContainer = document.createElement('div');
+          // Style container for centering, flex is good for this
+          iconContainer.style.width = '100%';
+          iconContainer.style.height = '100%';
+          iconContainer.style.display = 'flex';
+          iconContainer.style.alignItems = 'center';
+          iconContainer.style.justifyContent = 'center';
+          foreignObject.appendChild(iconContainer);
+        }
+
+        const IconComponent = getNodeIcon(dNode.type, dNode.name);
+        // Use ReactDOM.createRoot to render the React component into the div
+        const root = ReactDOM.createRoot(iconContainer);
+        root.render(React.createElement(IconComponent, {
+          className: "h-full w-full text-white" // Icon itself will be white
+        }));
+      });
 
     // Add interactive hover effects that provide immediate visual feedback
     nodeElements
@@ -524,7 +573,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
 
       // Update node positions
       nodeElements
-        .attr('transform', d => `translate(${d.x! - getNodeSize(d)/2}, ${d.y! - getNodeSize(d)/2})`);
+      .attr('transform', d => `translate(${d.x!}, ${d.y!})`); // Nodes are now centered at (x,y)
 
       // Update label positions to follow their corresponding nodes
       labelElements
@@ -733,123 +782,162 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
         {/* Enhanced File Information Sidebar */}
         {selectedNode && isSidebarOpen && (
           <Card className="glass border-cyan-500/20 col-span-1 lg:col-span-1 max-w-xs absolute right-0 top-0 h-full overflow-y-auto shadow-xl z-10">
-            <CardHeader className="pb-4 bg-slate-800/50">
-              <div className="flex items-center gap-3">
+            <CardHeader className="pb-3 bg-slate-800/50">
+              <div className="flex items-start gap-3">
                 <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"
                   style={{ backgroundColor: getNodeColor(selectedNode) }}
                 >
-                  <FileText className="h-4 w-4 text-white" />
+                  {React.createElement(getNodeIcon(selectedNode.type, selectedNode.name), { className: "h-5 w-5 text-white" })}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-sm font-medium truncate text-white">
+                  <CardTitle className="text-lg font-semibold truncate text-white" title={selectedNode.name}>
                     {selectedNode.name}
                   </CardTitle>
-                  <CardDescription className="text-xs text-slate-300">
+                  <CardDescription className="text-sm text-slate-300">
                     {selectedNode.type.toUpperCase()} файл
                   </CardDescription>
                 </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => setSelectedNode(null)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-slate-400 hover:text-white h-8 w-8"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 </Button>
               </div>
             </CardHeader>
             
-            <CardContent className="space-y-4 pt-4">
-              {/* File Metrics */}
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-300">Строк кода:</span>
-                  <Badge variant="secondary" className="font-mono bg-slate-700 text-slate-200">
-                    {selectedNode.lines?.toLocaleString() || 0}
-                  </Badge>
-                </div>
-                
-                {selectedNode.functions && selectedNode.functions.length > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-300">Функций:</span>
-                    <Badge variant="outline" className="bg-slate-700 text-slate-200">
-                      {selectedNode.functions.length}
-                    </Badge>
-                  </div>
-                )}
-                
-                {selectedNode.complexity && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-300">Сложность:</span>
-                    <Badge 
-                      variant={selectedNode.complexity > 5 ? "destructive" : "secondary"}
-                      className="bg-slate-700 text-slate-200"
-                    >
-                      {selectedNode.complexity}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-              
-              {/* Function List */}
-              {selectedNode.functions && selectedNode.functions.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-slate-200">
-                    Функции ({selectedNode.functions.length}):
-                  </h4>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {selectedNode.functions.slice(0, 10).map((func, index) => (
-                      <div 
-                        key={index}
-                        className="text-xs font-mono bg-slate-800 rounded px-2 py-1 truncate text-slate-300"
-                        title={func}
-                      >
-                        {func}
-                      </div>
-                    ))}
-                    {selectedNode.functions.length > 10 && (
-                      <div className="text-xs text-slate-400 text-center pt-1">
-                        +{selectedNode.functions.length - 10} больше...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Import/Export Information */}
-              {selectedNode.imports && selectedNode.imports.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-slate-200">
-                    Импорты ({selectedNode.imports.length}):
-                  </h4>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {selectedNode.imports.slice(0, 5).map((imp, index) => (
-                      <div 
-                        key={index}
-                        className="text-xs font-mono bg-blue-900/20 rounded px-2 py-1 truncate text-slate-300"
-                        title={imp || 'Unnamed Import'}
-                      >
-                        {imp || 'Unnamed Import'}
-                      </div>
-                    ))}
-                    {selectedNode.imports.length > 5 && (
-                      <div className="text-xs text-slate-400 text-center pt-1">
-                        +{selectedNode.imports.length - 5} больше...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* File Path */}
+            <CardContent className="pt-3 space-y-4 text-sm">
+              {/* --- Basic Information (Path) --- */}
               <div>
-                <h4 className="text-sm font-medium mb-2 text-slate-200">
-                  Путь к файлу:
-                </h4>
-                <div className="text-xs font-mono bg-slate-800 rounded p-2 break-all text-slate-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-medium">Path:</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedNode.id);
+                      setPathCopied(true);
+                      setTimeout(() => setPathCopied(false), 2000);
+                    }}
+                    className="h-7 px-2 text-xs text-slate-400 hover:text-slate-200"
+                  >
+                    {pathCopied ? <Check className="h-3 w-3 mr-1 text-green-400" /> : <ClipboardCopy className="h-3 w-3 mr-1" />}
+                    {pathCopied ? 'Copied!' : 'Copy Path'}
+                  </Button>
+                </div>
+                <div className="text-xs font-mono bg-slate-800 rounded p-2 break-all text-slate-300 mt-1">
                   {selectedNode.id}
                 </div>
+              </div>
+
+              <hr className="my-3 border-slate-600 dark:border-slate-700" />
+
+              {/* --- Metrics --- */}
+              <div>
+                <h4 className="text-base font-semibold mb-2 text-slate-100">Metrics</h4>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Lines of Code:</span>
+                    <Badge variant="secondary" className="font-mono bg-slate-700 text-slate-200 px-1.5 py-0.5">
+                      {selectedNode.lines?.toLocaleString() || 'N/A'}
+                    </Badge>
+                  </div>
+                  {selectedNode.complexity !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-300">Complexity:</span>
+                      <Badge variant={selectedNode.complexity > 10 ? "destructive" : "secondary"} className="font-mono bg-slate-700 text-slate-200 px-1.5 py-0.5">
+                        {selectedNode.complexity}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">Size:</span>
+                    <Badge variant="secondary" className="font-mono bg-slate-700 text-slate-200 px-1.5 py-0.5">
+                      {selectedNode.size ? formatBytes(selectedNode.size) : 'N/A'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="my-3 border-slate-600 dark:border-slate-700" />
+
+              {/* --- Contents --- */}
+              <div>
+                <h4 className="text-base font-semibold mb-2 text-slate-100">Contents</h4>
+
+                {/* Functions List */}
+                {selectedNode.functions && selectedNode.functions.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <h5 className="text-xs font-medium text-slate-300">Functions ({selectedNode.functions.length})</h5>
+                      {selectedNode.functions.length > 5 && (
+                        <Button variant="ghost" size="xs" onClick={() => setIsFunctionsExpanded(!isFunctionsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                          {isFunctionsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
+                          {isFunctionsExpanded ? 'Show less' : 'Show more'}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                      {(isFunctionsExpanded ? selectedNode.functions : selectedNode.functions.slice(0, 5)).map((func, index) => (
+                        <div key={index} className="text-xs font-mono bg-slate-800 rounded px-2 py-1 truncate text-slate-300" title={func}>
+                          {func}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Imports List */}
+                {selectedNode.imports && selectedNode.imports.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <h5 className="text-xs font-medium text-slate-300">Imports ({selectedNode.imports.length})</h5>
+                      {selectedNode.imports.length > 5 && (
+                        <Button variant="ghost" size="xs" onClick={() => setIsImportsExpanded(!isImportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                          {isImportsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
+                          {isImportsExpanded ? 'Show less' : 'Show more'}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                      {(isImportsExpanded ? selectedNode.imports : selectedNode.imports.slice(0, 5)).map((imp, index) => (
+                        <div key={index} className="text-xs font-mono bg-slate-800/70 rounded px-2 py-1 truncate text-slate-400" title={imp || 'Unnamed Import'}>
+                          {imp || 'Unnamed Import'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Exports List */}
+                {selectedNode.exports && selectedNode.exports.length > 0 && (
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <h5 className="text-xs font-medium text-slate-300">Exports ({selectedNode.exports.length})</h5>
+                      {selectedNode.exports.length > 5 && (
+                        <Button variant="ghost" size="xs" onClick={() => setIsExportsExpanded(!isExportsExpanded)} className="h-6 px-1.5 text-xs text-slate-400 hover:text-slate-200">
+                          {isExportsExpanded ? <ChevronUp className="h-3 w-3 mr-1"/> : <ChevronDown className="h-3 w-3 mr-1"/>}
+                          {isExportsExpanded ? 'Show less' : 'Show more'}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                      {(isExportsExpanded ? selectedNode.exports : selectedNode.exports.slice(0, 5)).map((exp, index) => (
+                        <div key={index} className="text-xs font-mono bg-slate-800/70 rounded px-2 py-1 truncate text-slate-400" title={exp || 'Unnamed Export'}>
+                          {exp || 'Unnamed Export'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!selectedNode.functions || selectedNode.functions.length === 0) &&
+                 (!selectedNode.imports || selectedNode.imports.length === 0) &&
+                 (!selectedNode.exports || selectedNode.exports.length === 0) && (
+                  <p className="text-xs text-slate-500 italic">No functions, imports, or exports found in this file.</p>
+                )}
               </div>
             </CardContent>
           </Card>
