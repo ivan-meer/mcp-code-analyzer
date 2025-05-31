@@ -317,7 +317,8 @@ class CodeAnalyzer:
     
     @staticmethod
     def analyze_project(project_path: str) -> ProjectAnalysisResult:
-        """Анализ всего проекта"""
+        """Анализ всего проекта с использованием параллельной обработки для повышения скорости"""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         path_obj = Path(project_path)
         
         if not path_obj.exists():
@@ -325,19 +326,38 @@ class CodeAnalyzer:
         
         files = []
         dependencies = []
+        file_paths = []
         
-        # Сканируем файлы проекта
+        # Сканируем файлы проекта и собираем список для параллельной обработки
         for file_path in path_obj.rglob("*"):
             if file_path.is_file() and file_path.suffix in ['.js', '.ts', '.tsx', '.jsx', '.py', '.html', '.css']:
                 # Пропускаем node_modules и другие служебные папки
                 if any(part in str(file_path) for part in ['node_modules', '.git', 'dist', 'build', '__pycache__']):
                     continue
-                
+                file_paths.append(str(file_path))
+        
+        # Ограничиваем количество файлов для анализа, чтобы избежать перегрузки
+        max_files = 500
+        if len(file_paths) > max_files:
+            print(f"Project has {len(file_paths)} files, limiting analysis to first {max_files} files for performance.")
+            file_paths = file_paths[:max_files]
+        
+        # Параллельная обработка файлов с индикатором прогресса
+        total_files = len(file_paths)
+        processed_files = 0
+        print(f"Starting analysis of {total_files} files...")
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_path = {executor.submit(CodeAnalyzer.analyze_file, path): path for path in file_paths}
+            for future in as_completed(future_to_path):
+                path = future_to_path[future]
                 try:
-                    file_info = CodeAnalyzer.analyze_file(str(file_path))
+                    file_info = future.result()
                     files.append(file_info)
+                    processed_files += 1
+                    print(f"Processed {processed_files}/{total_files} files ({(processed_files/total_files)*100:.1f}%) - {path}")
                 except Exception as e:
-                    print(f"Error analyzing {file_path}: {e}")
+                    print(f"Error analyzing {path}: {e}")
+        print("Analysis complete.")
         
         # Строим граф зависимостей, собираем все TODOs и документацию
         all_project_todos = []
