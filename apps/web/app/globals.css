@@ -141,47 +141,129 @@
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 220 10% 15%; /* Dark Gray (was very dark desaturated blue) */
+    --foreground: 220 10% 10%; /* Darker Gray for better contrast */
     --card: 0 0% 100%; /* White */
-    --card-foreground: 220 10% 15%; /* Dark Gray */
+    --card-foreground: 220 10% 10%; /* Darker Gray */
     --popover: 0 0% 100%; /* White */
-    --popover-foreground: 220 10% 15%; /* Dark Gray */
-    --primary: 221.2 83.2% 53.3%; /* Bright Blue (no change) */
-    --primary-foreground: 210 40% 98%; /* Almost White (no change) */
-    --secondary: 210 25% 94%; /* Light Gray (was very light gray) */
-    --secondary-foreground: 220 10% 15%; /* Dark Gray */
-    --muted: 210 25% 94%; /* Light Gray (was very light gray) */
-    --muted-foreground: 210 10% 45%; /* Medium Gray (was medium bluish gray) */
-    --accent: 210 30% 92%; /* Slightly more pronounced Light Gray (was very light gray) */
-    --accent-foreground: 220 10% 15%; /* Dark Gray */
+    --popover-foreground: 220 10% 10%; /* Darker Gray */
+    --primary: 221.2 83.2% 53.3%; /* Bright Blue */
+    --primary-foreground: 210 40% 98%; /* Almost White */
+    --secondary: 210 25% 94%; /* Light Gray */
+    --secondary-foreground: 220 10% 10%; /* Darker Gray */
+    --muted: 210 25% 94%; /* Light Gray */
+    --muted-foreground: 210 10% 45%; /* Medium Gray */
+    --accent: 210 30% 92%; /* Slightly more pronounced Light Gray */
+    --accent-foreground: 220 10% 10%; /* Darker Gray */
     --destructive: 0 75% 55%; /* Slightly less intense Red */
-    --destructive-foreground: 0 0% 100%; /* White (was very light gray) */
-    --border: 210 25% 90%; /* Light Gray (was very light gray) */
-    --input: 210 25% 90%; /* Light Gray (was very light gray) */
-    --ring: 220 90% 70%; /* Lighter Pastel Blue (was bright blue) */
-    --radius: 0.75rem; /* No change */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 210 25% 90%; /* Light Gray */
+    --input: 210 25% 90%; /* Light Gray */
+    --ring: 220 90% 70%; /* Lighter Pastel Blue */
+    --radius: 0.75rem;
+
+    /* Graph Colors - Light Theme */
+    --graph-node-core: #9333ea;
+    --graph-node-component: #06b6d4;
+    --graph-node-utility: #10b981;
+    --graph-node-config: #f59e0b;
+    --graph-link-import: #8b5cf6;
+    --graph-link-export: #06b6d4;
+    --graph-link-dependency: #64748b;
   }
 
   .dark {
     --background: 220 25% 8%; /* Very Dark Gray-Blue */
-    --foreground: 210 40% 98%; /* Almost White (no change) */
+    --foreground: 210 40% 98%; /* Almost White */
     --card: 220 20% 12%; /* Dark Gray-Blue (lighter than background) */
-    --card-foreground: 210 40% 98%; /* Almost White (no change) */
+    --card-foreground: 210 40% 98%; /* Almost White */
     --popover: 220 20% 13%; /* Dark Gray-Blue (similar to card) */
-    --popover-foreground: 210 40% 98%; /* Almost White (no change) */
-    --primary: 215 80% 65%; /* Softer, Vibrant Blue */
-    --primary-foreground: 210 40% 98%; /* Almost White (was dark) */
+    --popover-foreground: 210 40% 98%; /* Almost White */
+    --primary: 215 85% 70%; /* Brighter, Vibrant Blue */
+    --primary-foreground: 210 40% 98%; /* Almost White */
     --secondary: 220 15% 20%; /* Dark Gray-Blue */
-    --secondary-foreground: 210 40% 98%; /* Almost White (no change) */
-    --muted: 220 15% 20%; /* Dark Gray-Blue (same as secondary) */
+    --secondary-foreground: 210 40% 98%; /* Almost White */
+    --muted: 220 15% 20%; /* Dark Gray-Blue */
     --muted-foreground: 210 15% 60%; /* Medium Light Gray */
-    --accent: 220 15% 25%; /* Slightly Lighter Dark Gray-Blue (for hover) */
-    --accent-foreground: 210 40% 98%; /* Almost White (no change) */
+    --accent: 220 15% 25%; /* Slightly Lighter Dark Gray-Blue */
+    --accent-foreground: 210 40% 98%; /* Almost White */
     --destructive: 0 70% 50%; /* Brighter Red */
-    --destructive-foreground: 210 40% 98%; /* Almost White (no change) */
-    --border: 220 15% 22%; /* Dark Gray-Blue (lighter than card) */
-    --input: 220 20% 12%; /* Dark Gray-Blue (same as card, relies on border) */
-    --ring: 215 70% 75%; /* Lighter Shade of Primary Blue */
+    --destructive-foreground: 210 40% 98%; /* Almost White */
+    --border: 220 15% 22%; /* Dark Gray-Blue */
+    --input: 220 20% 12%; /* Dark Gray-Blue */
+    --ring: 215 85% 75%; /* Brighter Shade of Primary Blue */
+
+    /* Graph Colors - Dark Theme (can be same as light or adjusted) */
+    --graph-node-core: #a855f7; /* Slightly lighter purple */
+    --graph-node-component: #22d3ee; /* Slightly lighter cyan */
+    --graph-node-utility: #34d399; /* Slightly lighter green */
+    --graph-node-config: #fbbf24; /* Slightly lighter orange */
+    --graph-link-import: #c4b5fd; /* Lighter violet */
+    --graph-link-export: #67e8f9; /* Lighter cyan */
+    --graph-link-dependency: #94a3b8; /* Lighter gray */
+  }
+
+  .theme-high-contrast {
+    --background: 0 0% 0%; /* Black */
+    --foreground: 0 0% 100%; /* White */
+    --card: 0 0% 10%; /* Very Dark Gray */
+    --card-foreground: 0 0% 100%; /* White */
+    --popover: 0 0% 5%; /* Near Black */
+    --popover-foreground: 0 0% 100%; /* White */
+    --primary: 60 100% 50%; /* Bright Yellow */
+    --primary-foreground: 0 0% 0%; /* Black */
+    --secondary: 0 0% 20%; /* Dark Gray */
+    --secondary-foreground: 0 0% 100%; /* White */
+    --muted: 0 0% 15%; /* Darker Gray */
+    --muted-foreground: 0 0% 70%; /* Light Gray */
+    --accent: 200 100% 50%; /* Bright Cyan */
+    --accent-foreground: 0 0% 0%; /* Black */
+    --destructive: 0 100% 50%; /* Bright Red */
+    --destructive-foreground: 0 0% 0%; /* Black */
+    --border: 0 0% 40%; /* Medium Gray */
+    --input: 0 0% 10%; /* Very Dark Gray */
+    --ring: 60 100% 50%; /* Bright Yellow */
+    --radius: 0.75rem;
+
+    /* Graph Colors - High Contrast */
+    --graph-node-core: #FFFF00; /* Bright Yellow */
+    --graph-node-component: #00FFFF; /* Bright Cyan */
+    --graph-node-utility: #00FF00; /* Bright Green */
+    --graph-node-config: #FF00FF; /* Bright Magenta */
+    --graph-link-import: #FFFFFF; /* White */
+    --graph-link-export: #FFFF00; /* Bright Yellow */
+    --graph-link-dependency: #C0C0C0; /* Silver */
+  }
+
+  .theme-soft-tones {
+    --background: 30 30% 96%; /* Very Light Beige */
+    --foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --card: 30 25% 92%; /* Light Beige */
+    --card-foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --popover: 30 25% 90%; /* Slightly Darker Light Beige */
+    --popover-foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --primary: 180 30% 60%; /* Soft Teal */
+    --primary-foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --secondary: 30 20% 88%; /* Muted Beige */
+    --secondary-foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --muted: 30 20% 88%; /* Muted Beige */
+    --muted-foreground: 30 10% 50%; /* Medium Muted Brown */
+    --accent: 0 30% 70%; /* Soft Coral */
+    --accent-foreground: 30 10% 30%; /* Dark, Muted Brown */
+    --destructive: 0 40% 65%; /* Muted Red */
+    --destructive-foreground: 30 30% 96%; /* Very Light Beige */
+    --border: 30 20% 80%; /* Light Muted Brown-Gray */
+    --input: 30 25% 92%; /* Light Beige */
+    --ring: 180 30% 70%; /* Lighter Soft Teal */
+    --radius: 0.75rem;
+
+    /* Graph Colors - Soft Tones */
+    --graph-node-core: #77AABB; /* Soft Blue-Gray */
+    --graph-node-component: #DDAA77; /* Soft Orange-Brown */
+    --graph-node-utility: #88CCAA; /* Soft Green */
+    --graph-node-config: #EEDD99; /* Soft Yellow */
+    --graph-link-import: #AAAAAA; /* Medium Gray */
+    --graph-link-export: #BBDDCC; /* Soft Teal-Green */
+    --graph-link-dependency: #CCBBBB; /* Soft Pink-Gray */
   }
 }
 
