@@ -1,0 +1,307 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MCP Code Analyzer - Анализ проекта</title><link rel="stylesheet" href="styles.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1rem;
+    overflow-x: hidden;
+}
+.knowledge-graph {
+    width: 100%;
+    max-width: 1400px;
+    background-color: #333;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+.graph-header {
+    background-color: #444;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #555;
+}
+.graph-header h2 {
+    font-size: 1.4rem;
+    color: #00aaff;
+}
+.zoom-controls button {
+    background-color: #555;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    margin-left: 0.3rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.zoom-controls button:hover {
+    background-color: #00aaff;
+}
+
+/* Styles for D3.js Graph Controls (overlay) */
+.knowledge-graph .graph-controls { /* Scope to within .knowledge-graph to avoid conflict */
+    position: absolute;
+    top: 60px; /* Adjusted based on typical header height */
+    left: 15px;
+    background-color: rgba(50, 50, 50, 0.85); /* Darker, slightly more transparent */
+    padding: 12px;
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    z-index: 10; /* Ensure controls are above the graph SVG but below modals/tooltips */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 260px;
+    max-height: calc(100% - 75px); /* Adjust based on top/bottom spacing */
+    overflow-y: auto;
+    border: 1px solid #555;
+}
+.knowledge-graph .control-group {
+    display: flex;
+    flex-direction: column; /* Stack label and input */
+    gap: 4px;
+}
+.knowledge-graph .control-group label {
+    font-size: 0.85rem; /* Slightly smaller */
+    font-weight: 500;
+    color: #00aaff;
+}
+.knowledge-graph .control-group select,
+.knowledge-graph .control-group input[type="range"],
+.knowledge-graph .control-group input[type="checkbox"] {
+    padding: 0.4rem; /* Increased padding for easier interaction */
+    border-radius: 3px;
+    border: 1px solid #666;
+    background-color: #2a2a2a; /* Darker background for inputs */
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    width: 100%; /* Make inputs take full width of control group */
+}
+.knowledge-graph .control-group input[type="checkbox"] {
+    width: auto; /* Checkboxes should not be full width */
+    margin-right: 5px;
+}
+.knowledge-graph .control-group span { /* For slider value display */
+    font-size: 0.8rem;
+    color: #ccc;
+    align-self: flex-end; /* Align value to the right */
+}
+.knowledge-graph .graph-controls .control-button { /* Specific class for buttons within graph controls */
+    background-color: #0077cc;
+    color: white;
+    border: none;
+    padding: 0.5rem 0.8rem; /* Adjusted padding */
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: center;
+    font-size: 0.9rem;
+}
+.knowledge-graph .graph-controls .control-button:hover {
+    background-color: #005fa3;
+}
+/* End of D3.js Graph Controls Styles */
+
+.graph-stats {
+    padding: 0.5rem 1rem;
+    background-color: #3a3a3a;
+    font-size: 0.85rem;
+    color: #ccc;
+    border-bottom: 1px solid #555;
+}
+.graph-svg-container {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden; /* Ensures SVG doesn't overflow its container */
+}
+.graph-svg {
+    width: 100%;
+    height: 600px; /* Default height, can be adjusted */
+    display: block; /* Removes bottom space under SVG */
+    background-color: #2a2a2a;
+    cursor: grab;
+}
+.graph-svg.grabbing {
+    cursor: grabbing;
+}
+.node {
+    stroke-width: 2px;
+    transition: r 0.3s ease, opacity 0.3s ease;
+}
+.node.file { fill: #00aaff; stroke: #0077cc; }
+.node.function { fill: #00cc66; stroke: #00994f; }
+.node.variable { fill: #ffaa00; stroke: #cc8800; }
+.node.module { fill: #cc00ff; stroke: #9900cc; }
+.node.class { fill: #ff0055; stroke: #cc0044; }
+.node.external { fill: #999999; stroke: #666666; }
+.node:hover {
+    r: 12px !important; /* Increased radius on hover */
+}
+.link {
+    stroke: #777;
+    stroke-opacity: 0.6;
+    stroke-width: 1.5px;
+    transition: stroke-opacity 0.3s ease, stroke-width 0.3s ease;
+}
+.link.hover {
+    stroke-opacity: 1;
+    stroke-width: 3px;
+}
+.link.dependency { stroke-dasharray: 5,5; }
+.link.call { stroke: #00aaff; }
+.link.reference { stroke: #ffaa00; }
+.link.include { stroke: #00cc66; }
+.label {
+    font-size: 9px;
+    fill: #e0e0e0;
+    pointer-events: none; /* So labels don't interfere with mouse events on nodes */
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: opacity 0.3s ease;
+}
+.label.hidden {
+    opacity: 0;
+}
+.tooltip {
+    position: absolute;
+    background-color: rgba(20, 20, 20, 0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    pointer-events: none; /* To prevent tooltip from blocking mouse events */
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translate(-50%, -110%); /* Position above cursor */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 1px solid #555;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+.tooltip strong {
+    color: #00aaff;
+    display: block;
+    margin-bottom: 4px;
+}
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(42, 42, 42, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.loading-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+.spinner {
+    border: 6px solid #555;
+    border-top: 6px solid #00aaff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+.minimap {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 200px;
+    height: 150px;
+    background-color: rgba(50, 50, 50, 0.9);
+    border: 1px solid #666;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    overflow: hidden; /* Crucial for minimap function */
+}
+#minimap-svg {
+    display: block; /* Remove extra space under SVG */
+}
+.minimap-viewport {
+    fill: rgba(0, 170, 255, 0.3);
+    stroke: #00aaff;
+    stroke-width: 1px;
+    cursor: move;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@media (max-width: 768px) {
+    .graph-header h2 { font-size: 1.2rem; }
+    .graph-controls { flex-direction: column; align-items: stretch; }
+    .control-group { width: 100%; justify-content: space-between; }
+    .control-group select, .control-group input[type="range"] { width: 60%; }
+    .graph-controls button { width: 100%; }
+    .zoom-controls { display: flex; gap: 0.2rem; }
+    .zoom-controls button { padding: 0.2rem 0.4rem; }
+    .minimap { width: 150px; height: 100px; bottom: 10px; right: 10px; }
+    .tooltip { font-size: 0.8rem; padding: 6px 10px; }
+}
+</style></head><body><div class="container"><header><h1>MCP Code Analyzer</h1></header><main><section class="project-info-section"><div class="project-info-header"><h2>Информация о проекте</h2><button id="analyze-button" class="analyze-button">Анализировать</button></div><div class="project-meta"><p><strong>URL репозитория:</strong> <a href="https://github.com/ExampleUser/ExampleRepository" target="_blank">https://github.com/ExampleUser/ExampleRepository</a></p><p><strong>Последнее обновление:</strong> 2024-07-30 10:00:00</p><p><strong>Общее количество файлов:</strong> 150</p><p><strong>Общий размер проекта:</strong> 2.5 MB</p></div></section><section class="analysis-results-section"><h2>Результаты анализа</h2><div class="tabs"><button class="tab-link active" data-tab="code-structure">Структура кода</button><button class="tab-link" data-tab="dependencies">Зависимости</button><button class="tab-link" data-tab="security">Безопасность</button><button class="tab-link" data-tab="performance">Производительность</button><button class="tab-link" data-tab="graph">Граф</button></div><div id="code-structure" class="tab-content active"><div style="padding: 40px; text-align: center; opacity: 0.7;"><h3>👁️ Структура кода</h3><p>Визуализация структуры проекта в разработке...</p></div></div><div id="dependencies" class="tab-content"><p>Информация о зависимостях...</p></div><div id="security" class.tab-content"><p>Отчет по безопасности...</p></div><div id="performance" class="tab-content"><p>Данные по производительности...</p></div><div id="graph" class="tab-content"><div class="knowledge-graph"><div class="graph-header"><h2>Граф знаний проекта</h2><div class="zoom-controls"><button id="zoom-in">+</button><button id="zoom-out">-</button><button id="zoom-reset">Сброс</button></div></div><div class="graph-controls">
+    <div class="control-group">
+        <label for="node-type-filter">Тип узла:</label>
+        <select id="node-type-filter">
+            <option value="all">Все</option>
+            <option value="file">Файлы</option>
+            <option value="function">Функции</option>
+            <option value="variable">Переменные</option>
+            <option value="module">Модули</option>
+            <option value="class">Классы</option>
+            <option value="external">Внешние</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label for="depth-level">Глубина:</label>
+        <input type="range" id="depth-level" min="1" max="10" value="3">
+        <span id="depth-level-value">3</span>
+    </div>
+    <button id="toggle-labels" class="control-button">Метки</button>
+    <button id="toggle-arrows" class="control-button">Стрелки</button>
+    <div class="control-group">
+        <label for="charge-strength">Заряд:</label>
+        <input type="range" id="charge-strength" min="-2000" max="0" value="-150">
+        <span id="charge-strength-value">-150</span>
+    </div>
+    <div class="control-group">
+        <label for="link-distance">Длина связи:</label>
+        <input type="range" id="link-distance" min="10" max="300" value="50">
+        <span id="link-distance-value">50</span>
+    </div>
+    <div class="control-group">
+        <label for="gravity">Гравитация:</label>
+        <input type="range" id="gravity" min="0" max="1" step="0.01" value="0.1">
+        <span id="gravity-value">0.1</span>
+    </div>
+     <div class="control-group">
+        <label for="collision-radius">Коллизия (r):</label>
+        <input type="range" id="collision-radius" min="0" max="50" value="10">
+        <span id="collision-radius-value">10</span>
+    </div>
+    <div class="control-group">
+        <input type="checkbox" id="highlight-connected-nodes" checked>
+        <label for="highlight-connected-nodes">Выделять связи</label>
+    </div>
+    <div class="control-group">
+        <input type="checkbox" id="show-orphans">
+        <label for="show-orphans">Показывать изолированные</label>
+    </div>
+</div><div class="graph-stats"><p>Узлов: <span id="nodes-count">0</span> | Ребер: <span id="edges-count">0</span></p></div><svg class="graph-svg" id="main-graph"></svg><div class="tooltip" id="tooltip"></div><div class="loading-overlay visible" id="loading"><div class="spinner"></div></div><div class="minimap"><svg id="minimap-svg" width="100%" height="100%"></svg></div></div></div></section></main><footer><p>© 2024 MCP Code Analyzer</p></footer></div><script src="simple_graph_scripts.js"></script></body></html>
