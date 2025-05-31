@@ -278,9 +278,9 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', 'url(#linkGradient)')
-      .attr('stroke-opacity', 0.8) // Увеличена видимость связей
-      .attr('stroke-width', d => Math.sqrt((d.weight || 1) * 3)) // Увеличена толщина линий
+      .attr('stroke', '#ff0000') // Ярко-красный цвет для максимальной видимости
+      .attr('stroke-opacity', 1.0) // Максимальная непрозрачность
+      .attr('stroke-width', d => Math.sqrt((d.weight || 1) * 5)) // Значительно увеличена толщина линий
       .attr('marker-end', 'url(#arrowhead)')
       .style('cursor', 'pointer')
       .on('mouseover', function(event, d) {
@@ -288,7 +288,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           .transition()
           .duration(200)
           .attr('stroke-opacity', 1)
-          .attr('stroke-width', Math.sqrt((d.weight || 1) * 3) + 2);
+          .attr('stroke-width', Math.sqrt((d.weight || 1) * 5) + 2);
         
         // Highlight connected nodes
         nodeElements
@@ -305,7 +305,7 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
           
         const tooltipRect = tooltip.append('rect')
           .attr('fill', 'rgba(0, 0, 0, 0.9)')
-          .attr('stroke', '#06b6d4')
+          .attr('stroke', '#ff0000')
           .attr('stroke-width', 1)
           .attr('rx', 6);
           
@@ -327,8 +327,8 @@ export function ProjectVisualization({ data }: { data: ProjectData }) {
         d3.select(this)
           .transition()
           .duration(200)
-          .attr('stroke-opacity', 0.8)
-          .attr('stroke-width', Math.sqrt((d.weight || 1) * 3));
+          .attr('stroke-opacity', 1.0)
+          .attr('stroke-width', Math.sqrt((d.weight || 1) * 5));
         
         nodeElements
           .transition()
