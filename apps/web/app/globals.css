@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Улучшенная цветовая схема - темно-сине-черные тона */
+
 /* Enhanced Color System for MCP Code Analyzer */
 :root {
   /* Primary Blue Gradient for better readability */
@@ -167,25 +169,25 @@
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 220 10% 10%; /* Darker Gray for better contrast */
+    --foreground: 222.2 84% 4.9%; /* Darker Gray for better contrast */
     --card: 0 0% 100%; /* White */
-    --card-foreground: 220 10% 10%; /* Darker Gray */
+    --card-foreground: 222.2 84% 4.9%; /* Darker Gray */
     --popover: 0 0% 100%; /* White */
-    --popover-foreground: 220 10% 10%; /* Darker Gray */
-    --primary: 221.2 83.2% 53.3%; /* Bright Blue */
+    --popover-foreground: 222.2 84% 4.9%; /* Darker Gray */
+    --primary: 222.2 47.4% 11.2%; /* Bright Blue */
     --primary-foreground: 210 40% 98%; /* Almost White */
-    --secondary: 210 25% 94%; /* Light Gray */
-    --secondary-foreground: 220 10% 10%; /* Darker Gray */
-    --muted: 210 25% 94%; /* Light Gray */
-    --muted-foreground: 210 10% 45%; /* Medium Gray */
-    --accent: 210 30% 92%; /* Slightly more pronounced Light Gray */
-    --accent-foreground: 220 10% 10%; /* Darker Gray */
-    --destructive: 0 75% 55%; /* Slightly less intense Red */
-    --destructive-foreground: 0 0% 100%; /* White */
-    --border: 210 25% 90%; /* Light Gray */
-    --input: 210 25% 90%; /* Light Gray */
-    --ring: 220 90% 70%; /* Lighter Pastel Blue */
-    --radius: 0.75rem;
+    --secondary: 210 40% 96.1%; /* Light Gray */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* Darker Gray */
+    --muted: 210 40% 96.1%; /* Light Gray */
+    --muted-foreground: 215.4 16.3% 46.9%; /* Medium Gray */
+    --accent: 210 40% 96.1%; /* Slightly more pronounced Light Gray */
+    --accent-foreground: 222.2 47.4% 11.2%; /* Darker Gray */
+    --destructive: 0 84.2% 60.2%; /* Slightly less intense Red */
+    --destructive-foreground: 210 40% 98%; /* White */
+    --border: 214.3 31.8% 91.4%; /* Light Gray */
+    --input: 214.3 31.8% 91.4%; /* Light Gray */
+    --ring: 222.2 84% 4.9%; /* Lighter Pastel Blue */
+    --radius: 0.5rem;
 
     /* Graph Colors - Light Theme */
     --graph-node-core: #9333ea;
@@ -195,28 +197,33 @@
     --graph-link-import: #8b5cf6;
     --graph-link-export: #06b6d4;
     --graph-link-dependency: #64748b;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 220 25% 8%; /* Very Dark Gray-Blue */
-    --foreground: 210 40% 98%; /* Almost White */
-    --card: 220 20% 12%; /* Dark Gray-Blue (lighter than background) */
-    --card-foreground: 210 40% 98%; /* Almost White */
-    --popover: 220 20% 13%; /* Dark Gray-Blue (similar to card) */
-    --popover-foreground: 210 40% 98%; /* Almost White */
-    --primary: 215 85% 70%; /* Brighter, Vibrant Blue */
-    --primary-foreground: 210 40% 98%; /* Almost White */
-    --secondary: 220 15% 20%; /* Dark Gray-Blue */
-    --secondary-foreground: 210 40% 98%; /* Almost White */
-    --muted: 220 15% 20%; /* Dark Gray-Blue */
-    --muted-foreground: 210 15% 60%; /* Medium Light Gray */
-    --accent: 220 15% 25%; /* Slightly Lighter Dark Gray-Blue */
-    --accent-foreground: 210 40% 98%; /* Almost White */
-    --destructive: 0 70% 50%; /* Brighter Red */
-    --destructive-foreground: 210 40% 98%; /* Almost White */
-    --border: 220 15% 22%; /* Dark Gray-Blue */
-    --input: 220 20% 12%; /* Dark Gray-Blue */
-    --ring: 215 85% 75%; /* Brighter Shade of Primary Blue */
+    --background: 225 39% 7%; /* Глубокий темно-синий */
+    --foreground: 213 31% 91%; /* Холодный белый */
+    --card: 224 71% 4%; /* Почти черный с синим оттенком */
+    --card-foreground: 213 31% 91%; /* Холодный белый */
+    --popover: 224 71% 4%; /* Почти черный с синим оттенком */
+    --popover-foreground: 213 31% 91%; /* Холодный белый */
+    --primary: 217 91% 60%; /* Яркий электрический синий */
+    --primary-foreground: 222 84% 5%; /* Темный для контраста */
+    --secondary: 215 27% 12%; /* Темно-серо-синий */
+    --secondary-foreground: 213 31% 91%; /* Холодный белый */
+    --muted: 215 27% 12%; /* Темно-серо-синий */
+    --muted-foreground: 217 10% 64%; /* Приглушенный серый */
+    --accent: 216 34% 17%; /* Средний серо-синий */
+    --accent-foreground: 213 31% 91%; /* Холодный белый */
+    --destructive: 0 63% 31%; /* Темно-красный */
+    --destructive-foreground: 213 31% 91%; /* Холодный белый */
+    --border: 215 27% 12%; /* Темно-серо-синий */
+    --input: 215 27% 12%; /* Темно-серо-синий */
+    --ring: 217 91% 60%; /* Яркий электрический синий */
 
     /* Graph Colors - Dark Theme (can be same as light or adjusted) */
     --graph-node-core: #a855f7; /* Slightly lighter purple */
@@ -225,7 +232,7 @@
     --graph-node-config: #fbbf24; /* Slightly lighter orange */
     --graph-link-import: #c4b5fd; /* Lighter violet */
     --graph-link-export: #67e8f9; /* Lighter cyan */
-    --graph-link-dependency: #94a3b8; /* Lighter gray */
+    --graph-link-dependency: #94a3b8; /* Lighter gray */ --chart-1: 220 70% 50%; --chart-2: 160 60% 45%; --chart-3: 30 80% 55%; --chart-4: 280 65% 60%; --chart-5: 340 75% 55%;
   }
 
   .theme-high-contrast {
@@ -619,4 +626,74 @@
     background: white !important;
     color: black !important;
   }
+}
+
+/* Улучшенные стили для темно-сине-черной темы */
+.gradient-mesh {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(79, 70, 229, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, transparent 50%),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Специальный фон для hero секции */
+.hero-background {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, #0c1120 0%, #1e293b 100%);
+}
+
+/* Обновленные glass эффекты */
+.glass {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Электрический эффект для интерактивных элементов */
+.electric-glow {
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.electric-glow:hover {
+  box-shadow: 
+    0 0 30px rgba(59, 130, 246, 0.5),
+    0 0 60px rgba(79, 70, 229, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Улучшенные анимации */
+@keyframes electric-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6), 0 0 80px rgba(79, 70, 229, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+.animate-electric-pulse {
+  animation: electric-pulse 3s ease-in-out infinite;
+}
+
+/* Стили для кнопок в новой цветовой схеме */
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #6366f1, #2563eb);
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+  transform: translateY(-2px);
 }
