@@ -1,0 +1,122 @@
+/* Улучшенная цветовая схема - темно-сине-черные тона */
+.dark {
+  /* Основные цвета в сине-черной гамме */
+  --background: 225 39% 7%; /* Глубокий темно-синий почти черный */
+  --foreground: 213 31% 91%; /* Холодный белый */
+  --card: 224 71% 4%; /* Почти черный с синим оттенком */
+  --card-foreground: 213 31% 91%; /* Холодный белый */
+  --popover: 224 71% 4%; /* Почти черный с синим оттенком */
+  --popover-foreground: 213 31% 91%; /* Холодный белый */
+  --primary: 217 91% 60%; /* Яркий электрический синий */
+  --primary-foreground: 222 84% 5%; /* Темный для контраста */
+  --secondary: 215 27% 12%; /* Темно-серо-синий */
+  --secondary-foreground: 213 31% 91%; /* Холодный белый */
+  --muted: 215 27% 12%; /* Темно-серо-синий */
+  --muted-foreground: 217 10% 64%; /* Приглушенный серый */
+  --accent: 216 34% 17%; /* Средний серо-синий */
+  --accent-foreground: 213 31% 91%; /* Холодный белый */
+  --destructive: 0 63% 31%; /* Темно-красный */
+  --destructive-foreground: 213 31% 91%; /* Холодный белый */
+  --border: 215 27% 12%; /* Темно-серо-синий */
+  --input: 215 27% 12%; /* Темно-серо-синий */
+  --ring: 217 91% 60%; /* Яркий электрический синий */
+
+  /* Градиенты и эффекты */
+  --glass-bg: rgba(13, 25, 56, 0.9); /* Темно-синий с прозрачностью */
+  --glass-border: rgba(65, 105, 225, 0.2); /* Синяя граница */
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6); /* Глубокая тень */
+
+  /* Цвета для графа - в единой сине-фиолетовой гамме */
+  --graph-node-core: #6366f1; /* Яркий фиолетово-синий */
+  --graph-node-component: #3b82f6; /* Синий */
+  --graph-node-utility: #06b6d4; /* Циан */
+  --graph-node-config: #8b5cf6; /* Фиолетовый */
+  --graph-link-import: #a5b4fc; /* Светло-синий */
+  --graph-link-export: #93c5fd; /* Голубой */
+  --graph-link-dependency: #6b7280; /* Серый */
+}
+
+/* Улучшенный градиентный фон */
+.gradient-mesh {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(79, 70, 229, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, transparent 50%),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Специальный фон для hero секции */
+.hero-background {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(79, 70, 229, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, #0c1120 0%, #1e293b 100%);
+}
+
+/* Обновленные glass эффекты */
+.glass {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Электрический эффект для интерактивных элементов */
+.electric-glow {
+  box-shadow: 
+    0 0 20px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.electric-glow:hover {
+  box-shadow: 
+    0 0 30px rgba(59, 130, 246, 0.5),
+    0 0 60px rgba(79, 70, 229, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Улучшенные анимации */
+@keyframes electric-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6), 0 0 80px rgba(79, 70, 229, 0.3);
+    transform: scale(1.02);
+  }
+}
+
+.animate-electric-pulse {
+  animation: electric-pulse 3s ease-in-out infinite;
+}
+
+/* Стили для кнопок в новой цветовой схеме */
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #6366f1, #2563eb);
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Обновленные текстовые градиенты */
+.text-gradient {
+  background: linear-gradient(135deg, #6366f1, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-electric {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

@@ -2,15 +2,14 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ModernHeader } from '@/components/modern-header';
+import ModernNavbar from '@/components/modern-navbar';
 import { HeroSection } from '@/components/hero-section';
 import { ModernFeaturesGrid } from '@/components/modern-features-grid';
-import { ModernProjectInput } from '@/components/modern-project-input';
-import { AnalysisResults } from '@/components/analysis-results';
+import { ProjectInput } from '@/components/project-input-redesigned';
 import { LoadingState } from '@/components/loading-state';
 import { ModernFooter } from '@/components/modern-footer';
 import { AIStatusCard } from '@/components/ai-status-card';
-import { ProjectVisualization } from '@/components/visualization/project-visualization';
+import { AnalysisResults } from '@/components/analysis-results-simple';
 import { generateSampleReactProject, generateSamplePythonProject } from '@/lib/sample-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -144,7 +143,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen gradient-mesh">
-      <ModernHeader />
+      <ModernNavbar />
       
       {/* Main Content */}
       <main className="pt-16 lg:pt-20">
@@ -230,7 +229,7 @@ export default function HomePage() {
             {/* Enhanced Project Input */}
             <section className="py-20">
               <div className="container mx-auto px-6 lg:px-8">
-                <ModernProjectInput 
+                <ProjectInput 
                   projectPath={projectPath} 
                   setProjectPath={setProjectPath} 
                   isAnalyzing={isAnalyzing} 
@@ -324,7 +323,7 @@ export default function HomePage() {
               </div>
               
               {/* Enhanced Visualization with Knowledge Graph */}
-              <ProjectVisualization data={analysisResult} />
+              <AnalysisResults data={analysisResult} />
             </div>
           </div>
         )}
