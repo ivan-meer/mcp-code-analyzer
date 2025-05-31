@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+// Импортируем updateProgress из SSE endpoint
+import { updateProgress } from './progress/route';
 
 interface AnalysisRequest {
   path: string;
+  projectId?: string;
   include_tests?: boolean;
   analysis_depth?: string;
 }
@@ -112,29 +115,59 @@ class CodeAnalyzer {
     }
   }
 
-  static async analyzeProject(projectPath: string): Promise<ProjectAnalysisResult> {
+  static async analyzeProject(projectPath: string, projectId?: string): Promise<ProjectAnalysisResult> {
     try {
       // Проверяем существование пути
       await fs.access(projectPath);
-      
+
       const files: FileInfo[] = [];
       const dependencies: Array<{ from: string; to: string; type: string }> = [];
 
-      // Рекурсивно сканируем файлы
+      // Считаем общее количество файлов для прогресса (грубая оценка)
+      let totalFiles = 0;
+      const countFiles = async (dir: string) => {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          console.log('[countFiles] Открываем директорию:', dir, 'entries:', entries.length);
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', '.venv'].includes(entry.name)) {
+                await countFiles(fullPath);
+              }
+            } else if (entry.isFile()) {
+              const ext = path.extname(entry.name);
+              if (['.js', '.ts', '.tsx', '.jsx', '.py', '.css', '.html', '.json', '.md'].includes(ext)) {
+                totalFiles++;
+                console.log('[countFiles] Найден файл:', fullPath, 'расширение:', ext);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[countFiles] Ошибка при обходе директории:', dir, err);
+        }
+      };
+      await countFiles(projectPath);
+      console.log('[analyzeProject] totalFiles найдено:', totalFiles);
+
+      if (totalFiles === 0) {
+        throw new Error('В указанной директории не найдено файлов для анализа. Проверьте путь и содержимое папки.');
+      }
+
+      // Рекурсивно сканируем файлы с обновлением прогресса
+      let filesProcessed = 0;
       const scanDirectory = async (dir: string) => {
         try {
           const entries = await fs.readdir(dir, { withFileTypes: true });
-          
+
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
-            
-            // Пропускаем служебные папки
+
             if (entry.isDirectory()) {
               if (!['node_modules', '.git', 'dist', 'build', '.next', '__pycache__', '.venv'].includes(entry.name)) {
                 await scanDirectory(fullPath);
               }
             } else if (entry.isFile()) {
-              // Анализируем только файлы кода
               const ext = path.extname(entry.name);
               if (['.js', '.ts', '.tsx', '.jsx', '.py', '.css', '.html', '.json', '.md'].includes(ext)) {
                 try {
@@ -142,6 +175,18 @@ class CodeAnalyzer {
                   files.push(fileInfo);
                 } catch (error) {
                   console.warn(`Пропускаем файл ${fullPath}:`, error);
+                }
+                filesProcessed++;
+                // Обновляем прогресс через SSE endpoint
+                if (projectId && totalFiles > 0) {
+                  const percentage = Math.round((filesProcessed / totalFiles) * 100);
+                  updateProgress(projectId, {
+                    id: projectId,
+                    percentage,
+                    filesProcessed,
+                    totalFiles,
+                    status: percentage < 100 ? 'analyzing' : 'completed'
+                  });
                 }
               }
             }
@@ -172,7 +217,7 @@ class CodeAnalyzer {
       // Определяем архитектурные паттерны
       const patterns: string[] = [];
       const pathStrings = files.map(f => f.path.toLowerCase());
-      
+
       if (pathStrings.some(p => p.includes('component'))) {
         patterns.push('Component Architecture');
       }
@@ -200,6 +245,17 @@ class CodeAnalyzer {
         languages
       };
 
+      // Финальный прогресс
+      if (projectId && totalFiles > 0) {
+        updateProgress(projectId, {
+          id: projectId,
+          percentage: 100,
+          filesProcessed,
+          totalFiles,
+          status: 'completed'
+        });
+      }
+
       return {
         project_path: projectPath,
         files,
@@ -207,7 +263,7 @@ class CodeAnalyzer {
         metrics,
         architecture_patterns: patterns
       };
-      
+
     } catch (error) {
       throw new Error(`Ошибка анализа проекта: ${error}`);
     }
@@ -217,7 +273,7 @@ class CodeAnalyzer {
 export async function POST(request: NextRequest) {
   try {
     const body: AnalysisRequest = await request.json();
-    
+
     if (!body.path) {
       return NextResponse.json(
         { error: 'Путь к проекту обязателен' },
@@ -225,16 +281,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Начинаем анализ проекта:', body.path);
-    const result = await CodeAnalyzer.analyzeProject(body.path);
+    // Генерируем projectId если не передан
+    let projectId = body.projectId;
+    if (!projectId) {
+      projectId = Math.random().toString(36).slice(2) + Date.now();
+    }
+
+    console.log('Начинаем анализ проекта:', body.path, 'projectId:', projectId);
+    const result = await CodeAnalyzer.analyzeProject(body.path, projectId);
     console.log('Анализ завершен. Найдено файлов:', result.files.length);
 
-    return NextResponse.json(result);
-    
+    return NextResponse.json({ ...result, projectId });
+
   } catch (error) {
     console.error('Ошибка анализа:', error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Неизвестная ошибка анализа',
         details: error instanceof Error ? error.stack : undefined
       },

@@ -129,13 +129,16 @@ export function ProjectInput({
   }, [setProjectPath]);
 
   const handleAnalyze = useCallback(() => {
+    console.log('Button clicked');
     if (!projectPath) {
       return;
     }
     analyzeProject();
   }, [projectPath, analyzeProject]);
 
-  const isValidPath = projectPath.trim().length > 0;
+  console.log('DEBUG ProjectInput:', { projectPath, isAnalyzing, error, analyzeProjectType: typeof analyzeProject, projectPathType: typeof projectPath });
+  const isValidPath = typeof projectPath === 'string' && projectPath.trim().length > 0;
+  console.log('isValidPath:', isValidPath, 'projectPath:', projectPath, 'typeof:', typeof projectPath);
 
   return (
     <motion.div 
@@ -146,7 +149,7 @@ export function ProjectInput({
     >
       <Card className="group relative overflow-hidden glass border-blue-500/20 bg-slate-900/80 backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:border-blue-400/40">
         {/* Электрический градиент на hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-cyan-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-cyan-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
         
         <CardHeader>
           <CardTitle className="flex items-center gap-3 text-xl text-white">
