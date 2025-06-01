@@ -382,17 +382,63 @@ class CodeAnalyzer:
             # 📁 Интеллектуальный поиск пути к проекту
             path_obj = None
             
+            # 0. Загружаем настройки
+            try:
+                settings_path = Path(__file__).parent.parent / 'mcp_settings.json'
+                print(f"[DEBUG] Looking for settings at: {settings_path}")
+                if not settings_path.exists():
+                    print("[WARNING] mcp_settings.json not found, using defaults")
+                    settings = {}
+                else:
+                    with open(settings_path, 'r', encoding='utf-8') as f:
+                        settings = json.load(f)
+                
+                projects_config = settings.get('projects', {})
+                base_path = Path(projects_config.get('basePath', ''))
+                
+                # Пытаемся найти проект
+                project_path_obj = Path(project_path)
+                full_path = project_path_obj if project_path_obj.is_absolute() else base_path / project_path
+                print(f"[DEBUG] Trying project path: {full_path}")
+                
+                if not full_path.exists():
+                    # Если проект не найден, пробуем применить маппинг имен
+                    if 'nameMapping' in projects_config:
+                        mapped_name = projects_config['nameMapping'].get(project_path)
+                        if mapped_name:
+                            print(f"[DEBUG] Trying mapped name: {mapped_name}")
+                            mapped_path = Path(mapped_name) if Path(mapped_name).is_absolute() else base_path / mapped_name
+                            if mapped_path.exists():
+                                full_path = mapped_path
+                                print(f"[DEBUG] Using mapped path: {full_path}")
+                
+                if not full_path.exists():
+                    raise FileNotFoundError(
+                        f"Project path not found: {full_path}. "
+                        f"Checked: {project_path} and mapped names"
+                    )
+                
+                print(f"[DEBUG] Valid project path: {full_path}")
+                path_obj = full_path.resolve()
+                logger.info(f"Found project at: {path_obj}")
+                
+            except Exception as e:
+                logger.error(f"Error loading settings: {e}")
+            
             # 1. Проверяем как абсолютный путь
-            if Path(project_path).is_absolute() and Path(project_path).exists():
+            if not path_obj and Path(project_path).is_absolute() and Path(project_path).exists():
                 path_obj = Path(project_path).resolve()
+                logger.info(f"Found project at absolute path: {path_obj}")
             
             # 2. Проверяем относительно текущей директории
-            elif Path(project_path).exists():
+            elif not path_obj and Path(project_path).exists():
                 path_obj = Path(project_path).expanduser().resolve()
+                logger.info(f"Found project at relative path: {path_obj}")
             
             # 3. Проверяем относительно current working directory
-            elif Path.cwd().joinpath(project_path).exists():
+            elif not path_obj and Path.cwd().joinpath(project_path).exists():
                 path_obj = Path.cwd().joinpath(project_path).resolve()
+                logger.info(f"Found project at CWD path: {path_obj}")
             
             # 4. Ищем в стандартных местах для проектов
             else:
