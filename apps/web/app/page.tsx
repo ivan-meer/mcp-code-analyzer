@@ -37,7 +37,7 @@ interface SseProgressEvent {
   filesProcessed?: number;
   totalFiles?: number;
   logMessage?: string;
-  // metadata?: any; // Optional: if backend sends additional metadata
+  metadata?: any; // Optional: if backend sends additional metadata
 }
 
 interface ProjectAnalysis {
@@ -98,10 +98,10 @@ function HomePageContent() {
 
     setIsAnalyzing(true);
     setError(null);
-    
+
     setTimeout(() => {
       const sampleData = type === 'react' ? generateSampleReactProject() : generateSamplePythonProject();
-      
+
       // Transform sample data to match expected interface
       const transformedResult: ProjectAnalysis = {
         project_path: `sample-${type}-project/`,
@@ -115,11 +115,11 @@ function HomePageContent() {
           total_functions: sampleData.files.reduce((sum, file) => sum + file.functions.length, 0),
           avg_lines_per_file: Math.round(sampleData.metrics.total_lines / sampleData.metrics.total_files)
         },
-        architecture_patterns: type === 'react' 
+        architecture_patterns: type === 'react'
           ? ['Component Architecture', 'Redux Pattern', 'Custom Hooks', 'Service Layer']
           : ['MVC Pattern', 'Repository Pattern', 'Dependency Injection', 'Unit Testing']
       };
-      
+
       setAnalysisResult(transformedResult);
       setShowDemo(true);
       setDemoType(type);
@@ -183,7 +183,7 @@ function HomePageContent() {
         const data: SseProgressEvent = JSON.parse(event.data);
         setProgress(data);
         if (data.logMessage) {
-          setProgressLogs(prevLogs => [...prevLogs, { timestamp: new Date(), stage: data.stage, message: data.logMessage }]);
+          setProgressLogs(prevLogs => [...prevLogs, { timestamp: new Date(), stage: data.stage, message: data.logMessage || 'No message provided' }]);
         }
         // Close SSE connection on completion or error from server-sent event
         if (data.stage === 'completed' || data.stage === 'error') {
@@ -311,7 +311,7 @@ function HomePageContent() {
     setShowDemo(false);
     setProjectPath('');
     setError(null);
-    
+
     // 🏠 Уведомляем о возврате на главную
     notifyInfo('Возврат на главную', 'Готовы к новому анализу проекта');
   };
@@ -319,7 +319,7 @@ function HomePageContent() {
   return (
     <div className="min-h-screen gradient-mesh">
       <ModernNavbar />
-      
+
       {/* Main Content */}
       <main className="pt-16 lg:pt-20">
         {!analysisResult ? (
@@ -357,7 +357,7 @@ function HomePageContent() {
                 </div>
               </div>
             </div>
-            
+
             {/* Demo Showcase Section */}
             <section className="py-20 relative">
               <div className="container mx-auto px-6 lg:px-8">
@@ -372,7 +372,7 @@ function HomePageContent() {
                   <p className="text-xl text-slate-300 mb-8">
                     Изучите интерактивную визуализацию на примере реальных проектов
                   </p>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
                       onClick={() => loadSampleProject('react')}
@@ -382,7 +382,7 @@ function HomePageContent() {
                       <Code2 className="h-5 w-5 mr-3 group-hover:rotate-12 transition-transform duration-300" />
                       React Project Demo
                     </Button>
-                    
+
                     <Button
                       onClick={() => loadSampleProject('python')}
                       size="lg"
@@ -398,20 +398,20 @@ function HomePageContent() {
 
             {/* Enhanced Features Grid */}
             <ModernFeaturesGrid />
-            
+
             {/* Enhanced Project Input */}
             <section className="py-20">
               <div className="container mx-auto px-6 lg:px-8">
-                <ProjectInput 
-                  projectPath={projectPath} 
-                  setProjectPath={setProjectPath} 
-                  isAnalyzing={isAnalyzing} 
-                  error={error} 
-                  analyzeProject={analyzeProject} 
+                <ProjectInput
+                  projectPath={projectPath}
+                  setProjectPath={setProjectPath}
+                  isAnalyzing={isAnalyzing}
+                  error={error}
+                  analyzeProject={analyzeProject}
                 />
               </div>
             </section>
-            
+
             {/* AI Status Section */}
             <section className="py-20 glass">
               <div className="container mx-auto px-6 lg:px-8">
@@ -448,7 +448,7 @@ function HomePageContent() {
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Назад к главной
                   </Button>
-                  
+
                   {showDemo && (
                     <Badge variant="secondary" className="glass border-cyan-500/30 text-cyan-300 px-4 py-2">
                       <Eye className="h-4 w-4 mr-2" />
@@ -456,11 +456,11 @@ function HomePageContent() {
                     </Badge>
                   )}
                 </div>
-                
+
                 <Card className="glass border-purple-500/20">
                   <CardHeader>
                     <CardTitle className="text-gradient flex items-center gap-3">
-                      <div 
+                      <div
                         className="w-10 h-10 rounded-lg flex items-center justify-center"
                         style={{ backgroundColor: demoType === 'react' ? '#61dafb' : '#3776ab' }}
                       >
@@ -494,13 +494,13 @@ function HomePageContent() {
                   </CardContent>
                 </Card>
               </div>
-              
+
               {/* Enhanced Visualization with Knowledge Graph */}
               <AnalysisResults data={analysisResult} />
             </div>
           </div>
         )}
-        
+
         {/* 🔄 Интеллектуальная система мониторинга прогресса */}
         <ProgressMonitor
           projectPath={projectPath} // Added projectPath prop
@@ -519,7 +519,7 @@ function HomePageContent() {
         />
       </main>
       {/* End of Main Content */}
-      
+
       {/* Enhanced Footer */}
       <ModernFooter />
     </div>

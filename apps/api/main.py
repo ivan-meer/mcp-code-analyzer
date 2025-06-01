@@ -80,9 +80,13 @@ class DocFile(BaseModel):
 
 # Main Models
 class ProjectAnalysisRequest(BaseModel):
-    path: str
-    include_tests: bool = True
-    analysis_depth: str = "medium"
+    path: str = Field(..., alias="projectPath")
+    project_id: Optional[str] = Field(None, alias="projectId")
+    include_tests: bool = Field(True, alias="includeTests")
+    analysis_depth: str = Field("medium", alias="analysisDepth")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class FileInfo(BaseModel):
     path: str
@@ -399,7 +403,7 @@ class CodeAnalyzer:
                 
                 # Проверяем в D:\.AI-DATA\code_projects\ (если мы в этой структуре)
                 else:
-                    workspace_root = os.getenv('PROJECT_WORKSPACE_ROOT', 'D:\.AI-DATA\code_projects')
+                    workspace_root = os.getenv('PROJECT_WORKSPACE_ROOT', 'D:/.AI-DATA/code_projects')
                     if Path(workspace_root).exists():
                         project_in_workspace = Path(workspace_root).joinpath(project_path)
                         if project_in_workspace.exists():
@@ -659,6 +663,12 @@ async def analyze_project(request: ProjectAnalysisRequest):
     """
     🚀 Интеллектуальный анализ проекта с полным мониторингом
     Комплексная система анализа кода с AI интеграцией и детальным отслеживанием
+    
+    Параметры запроса:
+    - projectPath (обязательный): путь к проекту
+    - projectId (опциональный): идентификатор проекта
+    - includeTests (по умолчанию true): включать тесты в анализ
+    - analysisDepth (по умолчанию medium): глубина анализа (shallow/medium/deep)
     """
 
     # 🆔 Генерируем уникальный ID сессии для отслеживания
@@ -997,7 +1007,7 @@ async def discover_projects():
     search_paths = [
         Path.cwd(),  # Текущая директория
         Path(__file__).parent.parent.parent,  # Родительская директория API
-        Path(os.getenv('PROJECT_WORKSPACE_ROOT', 'D:\.AI-DATA\code_projects')),  # Workspace
+        Path(os.getenv('PROJECT_WORKSPACE_ROOT', 'D:/.AI-DATA/code_projects')),  # Workspace
     ]
     
     for search_path in search_paths:
