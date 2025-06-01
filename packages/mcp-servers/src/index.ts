@@ -12,6 +12,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { glob } from 'glob';
 
+// MCP Analyzer Imports
+import { TodoAnalyzer, TodoItem } from './analyzers/todo-analyzer';
+import { ComplexityAnalyzer } from './analyzers/complexity-analyzer';
+import { PatternDetector, DetectedPattern } from './analyzers/pattern-detector';
+import { QualityScorer, QualityReport, QualityMetrics } from './analyzers/quality-scorer';
+
 interface FileAnalysis {
   path: string;
   name: string;
@@ -43,6 +49,10 @@ interface ProjectAnalysis {
 
 class CodeAnalyzerServer {
   private server: Server;
+  private todoAnalyzer: TodoAnalyzer;
+  private complexityAnalyzer: ComplexityAnalyzer;
+  private patternDetector: PatternDetector;
+  private qualityScorer: QualityScorer;
 
   constructor() {
     this.server = new Server(
@@ -51,6 +61,12 @@ class CodeAnalyzerServer {
         version: '1.0.0',
       }
     );
+
+    // Instantiate analyzers
+    this.todoAnalyzer = new TodoAnalyzer();
+    this.complexityAnalyzer = new ComplexityAnalyzer();
+    this.patternDetector = new PatternDetector();
+    this.qualityScorer = new QualityScorer();
 
     this.setupToolHandlers();
     
@@ -103,6 +119,30 @@ class CodeAnalyzerServer {
             },
             required: ['filePath']
           }
+        },
+        {
+          name: 'detect_file_patterns',
+          description: 'Detects design patterns in a single file.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: { type: 'string', description: 'Path to the file for pattern detection' }
+            },
+            required: ['filePath']
+          },
+          // outputSchema: { type: 'application/json' } // Example if SDK supports it
+        },
+        {
+          name: 'assess_file_quality',
+          description: 'Assesses the quality of a single file based on various metrics.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: { type: 'string', description: 'Path to the file for quality assessment' }
+            },
+            required: ['filePath']
+          },
+          // outputSchema: { type: 'application/json' } // Example if SDK supports it
         }
       ]
     }));
@@ -118,6 +158,12 @@ class CodeAnalyzerServer {
           case 'analyze_file':
             return await this.analyzeFile(args as any);
           
+          case 'detect_file_patterns':
+            return await this.detectFilePatterns(args as { filePath: string });
+
+          case 'assess_file_quality':
+            return await this.assessFileQuality(args as { filePath: string });
+
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -409,6 +455,61 @@ class CodeAnalyzerServer {
     }
 
     return patterns;
+  }
+
+  private async detectFilePatterns(args: { filePath: string }): Promise<{ content: Array<{ type: string; text: string } | { type: 'application/json'; data: any }> }> {
+    const { filePath } = args;
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const patterns = this.patternDetector.analyze(filePath, content);
+      return {
+        content: [
+          { type: 'text', text: `Patterns detected in ${filePath}:` },
+          { type: 'application/json', data: patterns }
+        ]
+      };
+    } catch (error) {
+      console.error(`Error detecting patterns in ${filePath}:`, error);
+      if (error instanceof McpError) throw error;
+      throw new McpError(ErrorCode.InternalError, `Failed to detect patterns in ${filePath}: ${error.message}`);
+    }
+  }
+
+  private async assessFileQuality(args: { filePath: string }): Promise<{ content: Array<{ type: string; text: string } | { type: 'application/json'; data: any }> }> {
+    const { filePath } = args;
+    try {
+      const code = await fs.readFile(filePath, 'utf-8');
+
+      // Assuming analyzeFile for TodoItem[] structure might need adjustment if it's not returning TodoItem[]
+      // For now, let's assume todoAnalyzer.analyzeFile exists and works as expected by QualityScorer
+      // If todoAnalyzer.analyzeFile is the one from this class, it returns a different structure.
+      // Let's assume a more direct todo analysis for now:
+      const todos = this.todoAnalyzer.analyzeFile(filePath, code); // Corrected to use analyzeFile
+      const cyclomaticComplexity = this.complexityAnalyzer.calculateCyclomaticComplexity(code);
+
+      const lines = code.split('\n');
+      const commentLines = lines.filter(line => line.trim().startsWith('//') || line.trim().startsWith('/*') || line.trim().startsWith('*') || line.trim().startsWith('*/') || line.trim().startsWith('#')).length;
+      const commentRatio = lines.length > 0 ? commentLines / lines.length : 0;
+
+      const metrics: QualityMetrics = {
+        cyclomaticComplexity,
+        todoCount: todos.length, // todos here is expected to be TodoItem[]
+        commentRatio
+      };
+
+      const report = this.qualityScorer.assess(filePath, code, metrics);
+
+      return {
+        content: [
+          { type: 'text', text: `Quality assessment for ${filePath}:` },
+          { type: 'application/json', data: report }
+        ]
+      };
+    } catch (error) {
+      console.error(`Error assessing quality for ${filePath}:`, error);
+      if (error instanceof McpError) throw error;
+      throw new McpError(ErrorCode.InternalError, `Failed to assess quality for ${filePath}: ${error.message}`);
+    }
   }
 
   async run() {
