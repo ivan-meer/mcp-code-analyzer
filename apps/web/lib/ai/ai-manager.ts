@@ -18,6 +18,7 @@ export class AIManager {
     });
   }
   
+
   /**
    * Объясняет код с использованием OpenAI или Anthropic.
    * @param code Код для объяснения.
@@ -28,6 +29,7 @@ export class AIManager {
     console.log(`\x1b[36mExplaining code in ${language}: ${code.substring(0, 50)}...\x1b[0m`);
     if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
       console.error(`\x1b[31mAPI keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.\x1b[0m`);
+main
       return "Error: API keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.";
     }
     if (this.openai.apiKey) {
@@ -35,12 +37,15 @@ export class AIManager {
         const response = await this.openai.chat.completions.create({
           model: "gpt-3.5-turbo",
           messages: [
+
             { role: "system", content: CODE_EXPLAIN_SYSTEM_PROMPT },
+ main
             { role: "user", content: `Explain the following ${language} code:
 
 ${code}` }
           ],
         });
+
         const explanation = response.choices[0]?.message?.content?.trim() || "Could not get explanation from OpenAI.";
         if (response.usage) {
           console.log(`\x1b[32mTokens used: ${response.usage.total_tokens}\x1b[0m`);
@@ -163,10 +168,12 @@ ${code}` }
           messages: [
             { role: "system", content: CODE_PATTERNS_SYSTEM_PROMPT },
             { role: "user", content: `Analyze the following ${language} code for design patterns:
+ main
 
 ${code}` }
           ],
         });
+
         const patterns = response.choices[0]?.message?.content?.trim() || "Could not detect patterns from OpenAI.";
         if (response.usage) {
           console.log(`\x1b[32mTokens used: ${response.usage.total_tokens}\x1b[0m`);
@@ -204,5 +211,6 @@ ${code}` }
     console.error(`\x1b[31mError detecting patterns with Anthropic:\x1b[0m`, error);
       return "Error detecting patterns with Anthropic.";
     }
+ main
   }
 }
