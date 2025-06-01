@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "github.com/upstash/context7-mcp": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  },
+  "projects": {
+    "basePath": "D:/.AI-DATA/code_projects",
+    "nameMapping": {
+      "graphiti": "graphiti-mcp-neo4j"
+    }
+  },
+  "analysis": {
+    "duplicates": {
+      "enabled": true,
+      "minFileSize": 100,
+      "ignoreExtensions": [".gitignore", ".env", ".md"],
+      "hashAlgorithm": "sha256"
+    },
+    "comments": {
+      "patterns": {
+        "TODO": "TODO:?(.*)",
+        "FIXME": "FIXME:?(.*)",
+        "HACK": "HACK:?(.*)",
+        "NOTE": "NOTE:?(.*)",
+        "OPTIMIZE": "OPTIMIZE:?(.*)"
+      },
+      "priorities": {
+        "FIXME": 1,
+        "HACK": 2,
+        "TODO": 3,
+        "OPTIMIZE": 4,
+        "NOTE": 5
+      }
+    }
+  }
+}

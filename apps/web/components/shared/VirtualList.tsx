@@ -198,7 +198,7 @@ export const VirtualList = forwardRef<VirtualListRef, VirtualListProps<any>>(
     footer,
     ariaLabel = 'Список элементов',
     role = 'list'
-  }: VirtualListProps<T>, ref) => {
+  }: VirtualListProps<T>, ref: React.Ref<VirtualListRef>) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [focusedIndex, setFocusedIndex] = React.useState<number>(-1);
 

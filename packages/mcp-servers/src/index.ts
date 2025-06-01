@@ -13,6 +13,15 @@ import { ComplexityAnalyzer } from './analyzers/complexity-analyzer';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { glob } from 'glob';
+import http from 'node:http'; // Added for SSE
+import { URL } from 'node:url'; // Added for SSE
+
+// MCP Analyzer Imports
+// import { TodoAnalyzer, TodoItem } from './analyzers/todo-analyzer'; // TodoItem seems unused here, commented for now
+import { TodoAnalyzer } from './analyzers/todo-analyzer';
+import { ComplexityAnalyzer } from './analyzers/complexity-analyzer';
+import { PatternDetector, DetectedPattern } from './analyzers/pattern-detector';
+import { QualityScorer, QualityReport, QualityMetrics } from './analyzers/quality-scorer';
 
 interface FileAnalysis {
   path: string;
@@ -45,29 +54,119 @@ interface ProjectAnalysis {
   architecturePatterns: string[];
 }
 
+// Structure for SSE progress events
+interface ProgressEvent {
+  projectId: string;
+  stage: 'initializing' | 'scanning' | 'parsing' | 'ai-processing' | 'generating-insights' | 'completed' | 'error';
+  percentage: number;
+  currentFile?: string;
+  filesProcessed?: number;
+  totalFiles?: number;
+  logMessage?: string;
+}
+
 class CodeAnalyzerServer {
   private server: Server;
+
+  private sseHttpServer: http.Server; // For SSE
+  private activeSseClients: Map<string, http.ServerResponse>; // projectId -> response
   private todoAnalyzer: TodoAnalyzer;
   private complexityAnalyzer: ComplexityAnalyzer;
+  private patternDetector: PatternDetector;
+  private qualityScorer: QualityScorer;
 
-  constructor() {
+  constructor(private ssePort = 8001) { // Added ssePort, default 8001 to avoid conflict with main :8000
+ main
     this.server = new Server(
       {
         name: 'code-analyzer-server',
         version: '1.0.0',
       }
     );
+    this.activeSseClients = new Map();
+
+    // Instantiate analyzers
+    this.todoAnalyzer = new TodoAnalyzer();
+    this.complexityAnalyzer = new ComplexityAnalyzer();
+    this.patternDetector = new PatternDetector();
+    this.qualityScorer = new QualityScorer();
 
     this.todoAnalyzer = new TodoAnalyzer();
     this.complexityAnalyzer = new ComplexityAnalyzer();
     this.setupToolHandlers();
+    this.setupSseServer();
     
     // Error handling
     this.server.onerror = (error: Error) => console.error('[MCP Error]', error);
     process.on('SIGINT', async () => {
       await this.server.close();
+      this.sseHttpServer.close(() => {
+        console.log('SSE HTTP server closed');
+      });
       process.exit(0);
     });
+  }
+
+  private setupSseServer() {
+    this.sseHttpServer = http.createServer((req, res) => {
+      // Basic routing for SSE endpoint
+      if (req.url && req.method === 'GET') {
+        const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+        if (reqUrl.pathname.startsWith('/api/analyze/progress/')) {
+          this.handleSseConnection(req, res, reqUrl);
+          return;
+        }
+      }
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Not Found' }));
+    });
+
+    this.sseHttpServer.listen(this.ssePort, () => {
+      console.log(`🚀 SSE server listening on http://localhost:${this.ssePort}/api/analyze/progress/:projectId`);
+    });
+  }
+
+  private handleSseConnection(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
+    const parts = url.pathname.split('/');
+    const projectId = parts[parts.length - 1];
+
+    if (!projectId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Missing projectId' }));
+      return;
+    }
+
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*', // Allow CORS for simplicity, adjust as needed
+    });
+
+    // Store the client
+    this.activeSseClients.set(projectId, res);
+    console.log(`SSE client connected for projectId: ${projectId}`);
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ projectId, stage: 'initializing', percentage: 0, logMessage: 'SSE connection established.' })}\n\n`);
+
+    // Handle client disconnection
+    req.on('close', () => {
+      this.activeSseClients.delete(projectId);
+      console.log(`SSE client disconnected for projectId: ${projectId}`);
+    });
+  }
+
+  // Helper to send progress updates
+  private sendProgress(projectId: string, progressData: Omit<ProgressEvent, 'projectId'>) {
+    const client = this.activeSseClients.get(projectId);
+    if (client) {
+      const event: ProgressEvent = { projectId, ...progressData };
+      client.write(`data: ${JSON.stringify(event)}\n\n`);
+    } else {
+      console.warn(`No active SSE client for projectId: ${projectId}. Progress not sent.`);
+    }
   }
 
   private setupToolHandlers() {
@@ -83,6 +182,10 @@ class CodeAnalyzerServer {
                 type: 'string',
                 description: 'Путь к корневой папке проекта'
               },
+              projectId: { // New property for SSE
+                type: 'string',
+                description: 'Unique ID for tracking analysis progress via SSE'
+              },
               includeTests: {
                 type: 'boolean',
                 description: 'Включать ли тестовые файлы в анализ',
@@ -95,7 +198,7 @@ class CodeAnalyzerServer {
                 default: 'medium'
               }
             },
-            required: ['projectPath']
+            required: ['projectPath', 'projectId'] // projectId is now required
           }
         },
         {
@@ -111,6 +214,30 @@ class CodeAnalyzerServer {
             },
             required: ['filePath']
           }
+        },
+        {
+          name: 'detect_file_patterns',
+          description: 'Detects design patterns in a single file.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: { type: 'string', description: 'Path to the file for pattern detection' }
+            },
+            required: ['filePath']
+          },
+          // outputSchema: { type: 'application/json' } // Example if SDK supports it
+        },
+        {
+          name: 'assess_file_quality',
+          description: 'Assesses the quality of a single file based on various metrics.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: { type: 'string', description: 'Path to the file for quality assessment' }
+            },
+            required: ['filePath']
+          },
+          // outputSchema: { type: 'application/json' } // Example if SDK supports it
         }
       ]
     }));
@@ -126,6 +253,12 @@ class CodeAnalyzerServer {
           case 'analyze_file':
             return await this.analyzeFile(args as any);
           
+          case 'detect_file_patterns':
+            return await this.detectFilePatterns(args as { filePath: string });
+
+          case 'assess_file_quality':
+            return await this.assessFileQuality(args as { filePath: string });
+
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -146,22 +279,29 @@ class CodeAnalyzerServer {
 
   private async analyzeProject(args: {
     projectPath: string;
+    projectId: string; // Added projectId
     includeTests?: boolean;
     analysisDepth?: 'basic' | 'medium' | 'deep';
   }) {
-    const { projectPath, includeTests = true, analysisDepth = 'medium' } = args;
+    const { projectPath, projectId, includeTests = true, analysisDepth = 'medium' } = args;
 
-    // Проверяем существование папки
+    // Wrap the entire analysis process to catch errors and send SSE updates
     try {
-      await fs.access(projectPath);
-    } catch {
-      throw new McpError(
-        ErrorCode.InvalidRequest,
-        `Project path does not exist: ${projectPath}`
-      );
-    }
+      this.sendProgress(projectId, { stage: 'initializing', percentage: 0, logMessage: `Starting analysis for project: ${projectPath}` });
 
-    // Паттерны файлов для анализа
+      try {
+        await fs.access(projectPath);
+      } catch (e) {
+        this.sendProgress(projectId, { stage: 'error', percentage: 0, logMessage: `Project path does not exist: ${projectPath}. Error: ${e.message}` });
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Project path does not exist: ${projectPath}`
+        );
+      }
+
+      this.sendProgress(projectId, { stage: 'initializing', percentage: 1, logMessage: `Project path validated: ${projectPath}` });
+
+      // Паттерны файлов для анализа
     const patterns = [
       '**/*.js',
       '**/*.ts',
@@ -193,33 +333,115 @@ class CodeAnalyzerServer {
 
     const files: FileAnalysis[] = [];
     const dependencies: Array<{ from: string; to: string; type: string }> = [];
+    let allFoundFiles: string[] = [];
 
-    // Сканируем файлы
-    for (const pattern of patterns) {
-      const foundFiles = await glob(pattern, {
-        cwd: projectPath,
-        ignore: ignorePatterns,
-        absolute: true
+    // Initial scan to get total files for progress calculation
+    this.sendProgress(projectId, { stage: 'scanning', percentage: 2, logMessage: 'Scanning for files...' });
+    try {
+      for (const pattern of patterns) {
+        const found = await glob(pattern, {
+          cwd: projectPath,
+          ignore: ignorePatterns,
+          absolute: true,
+          nodir: true, // Ensure only files are matched
+        });
+        allFoundFiles.push(...found);
+      }
+      allFoundFiles = [...new Set(allFoundFiles)]; // Remove duplicates if any
+    } catch (e) {
+      this.sendProgress(projectId, { stage: 'error', percentage: 2, logMessage: `Error during file globbing: ${e.message}` });
+      throw new McpError(ErrorCode.InternalError, `Error scanning files: ${e.message}`);
+    }
+
+    const totalFiles = allFoundFiles.length;
+
+    // Handle "No files found" scenario
+    if (totalFiles === 0) {
+      const noFilesLogMessage = "No analyzable files found at the specified path. Please check the path, file extensions, or include/exclude patterns.";
+      this.sendProgress(projectId, {
+        stage: 'error',
+        percentage: 5, // Consistent with scanning phase completion percentage
+        currentFile: '',
+        filesProcessed: 0,
+        totalFiles: 0,
+        logMessage: noFilesLogMessage
+      });
+      // Return a specific MCP response for this case
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Analysis couldn't proceed: ${noFilesLogMessage}`
+          },
+          {
+            type: 'application/json', // Using application/json for structured data
+            data: { // Actual data for the JSON content part
+              message: noFilesLogMessage,
+              projectPath: projectPath,
+              files: [],
+              dependencies: [],
+              metrics: {
+                totalFiles: 0,
+                totalLines: 0,
+                totalFunctions: 0,
+                avgLinesPerFile: 0,
+                languages: []
+              },
+              architecturePatterns: []
+            }
+          }
+        ]
+      };
+    }
+
+    // If files are found, proceed with sending scanning complete and then parsing
+    this.sendProgress(projectId, { stage: 'scanning', percentage: 5, totalFiles, filesProcessed: 0, logMessage: `Found ${totalFiles} files to analyze.` });
+
+    let filesProcessed = 0;
+
+    // Анализируем файлы
+    // Ensure this loop does not run if totalFiles is 0 (already handled by the check above)
+    for (const filePath of allFoundFiles) {
+      // Calculate percentage: ensure totalFiles is not zero to prevent division by zero,
+      // though the `if (totalFiles === 0)` check above should prevent this loop from running.
+      const currentPercentage = totalFiles > 0 ? 5 + Math.round((filesProcessed / totalFiles) * 90) : 5;
+      this.sendProgress(projectId, {
+        stage: 'parsing',
+        percentage: currentPercentage,
+        currentFile: filePath,
+        filesProcessed,
+        totalFiles,
+        logMessage: `Analyzing file: ${path.basename(filePath)}`
       });
 
-      for (const filePath of foundFiles) {
-        try {
-          const fileAnalysis = await this.analyzeFileInternal(filePath, analysisDepth);
-          files.push(fileAnalysis);
+      try {
+        const fileAnalysis = await this.analyzeFileInternal(filePath, analysisDepth);
+        files.push(fileAnalysis);
 
-          // Собираем зависимости
-          for (const importPath of fileAnalysis.imports) {
-            dependencies.push({
-              from: filePath,
-              to: importPath,
-              type: 'import'
-            });
-          }
-        } catch (error) {
-          console.warn(`Ошибка анализа файла ${filePath}:`, error);
+        // Собираем зависимости
+        for (const importPath of fileAnalysis.imports) {
+          dependencies.push({
+            from: filePath,
+            to: importPath,
+            type: 'import'
+          });
         }
+      } catch (error) {
+        console.warn(`Error analyzing file ${filePath}:`, error);
+        // Optionally send a per-file error event
+        this.sendProgress(projectId, {
+          stage: 'parsing', // or a specific 'file_error' stage
+          percentage: currentPercentage,
+          currentFile: filePath,
+          filesProcessed, // filesProcessed is not incremented for this failed file
+          totalFiles,
+          logMessage: `Error analyzing ${path.basename(filePath)}: ${error.message}`
+        });
       }
+      filesProcessed++;
     }
+
+    this.sendProgress(projectId, { stage: 'generating-insights', percentage: 95, filesProcessed, totalFiles, logMessage: 'Generating final project insights...' });
 
     // Вычисляем метрики
     const totalLines = files.reduce((sum, file) => sum + (file.linesOfCode || 0), 0);
@@ -243,11 +465,14 @@ class CodeAnalyzerServer {
       architecturePatterns
     };
 
+    this.sendProgress(projectId, { stage: 'completed', percentage: 100, filesProcessed, totalFiles, logMessage: 'Project analysis complete.' });
+
+    // The original MCP response remains the same, progress is out-of-band via SSE
     return {
       content: [
         {
           type: 'text',
-          text: `Анализ проекта завершен!\n\n📊 **Статистика:**\n- Файлов: ${analysis.metrics.totalFiles}\n- Строк кода: ${analysis.metrics.totalLines.toLocaleString()}\n- Функций: ${analysis.metrics.totalFunctions}\n- Языков: ${analysis.metrics.languages.join(', ')}\n\n🏗️ **Архитектурные паттерны:**\n${analysis.architecturePatterns.map(p => `- ${p}`).join('\n')}\n\n📈 Данные готовы для визуализации!`
+          text: `Анализ проекта завершен!\n\n📊 **Статистика:**\n- Файлов: ${analysis.metrics.totalFiles}\n- Строк кода: ${analysis.metrics.totalLines.toLocaleString()}\n- Функций: ${analysis.metrics.totalFunctions}\n- Языков: ${analysis.metrics.languages.join(', ')}\n\n🏗️ **Архитектурные паттерны:**\n${analysis.architecturePatterns.map(p => `- ${p}`).join('\n')}\n\n📈 Данные готовы для визуализации! Project ID for progress: ${projectId}`
         },
         {
           type: 'text',
@@ -255,7 +480,24 @@ class CodeAnalyzerServer {
         }
       ]
     };
+  } catch (error) {
+    // Ensure a final SSE error message is sent for any unhandled errors during analysis
+    // Determine percentage based on where it might have failed; can be approximate
+    const errorPercentage = error.stage && error.percentage ? error.percentage : ( (error.filesProcessed && error.totalFiles) ? Math.round((error.filesProcessed / error.totalFiles) * 100) : 50); // Generic fallback
+    this.sendProgress(projectId, {
+      stage: 'error',
+      percentage: errorPercentage,
+      logMessage: `Analysis failed: ${error.message}`,
+      ...(error.filesProcessed && { filesProcessed: error.filesProcessed }),
+      ...(error.totalFiles && { totalFiles: error.totalFiles }),
+    });
+    // Re-throw the error so MCP framework can handle it as well
+    if (error instanceof McpError) {
+      throw error;
+    }
+    throw new McpError(ErrorCode.InternalError, `Error in analyzeProject: ${error.message}`);
   }
+}
 
   private async analyzeFile(args: { filePath: string }) {
     const { filePath } = args;
@@ -450,13 +692,71 @@ class CodeAnalyzerServer {
     return patterns;
   }
 
+  private async detectFilePatterns(args: { filePath: string }): Promise<{ content: Array<{ type: string; text: string } | { type: 'application/json'; data: any }> }> {
+    const { filePath } = args;
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const patterns = this.patternDetector.analyze(filePath, content);
+      return {
+        content: [
+          { type: 'text', text: `Patterns detected in ${filePath}:` },
+          { type: 'application/json', data: patterns }
+        ]
+      };
+    } catch (error) {
+      console.error(`Error detecting patterns in ${filePath}:`, error);
+      if (error instanceof McpError) throw error;
+      throw new McpError(ErrorCode.InternalError, `Failed to detect patterns in ${filePath}: ${error.message}`);
+    }
+  }
+
+  private async assessFileQuality(args: { filePath: string }): Promise<{ content: Array<{ type: string; text: string } | { type: 'application/json'; data: any }> }> {
+    const { filePath } = args;
+    try {
+      const code = await fs.readFile(filePath, 'utf-8');
+
+      // Assuming analyzeFile for TodoItem[] structure might need adjustment if it's not returning TodoItem[]
+      // For now, let's assume todoAnalyzer.analyzeFile exists and works as expected by QualityScorer
+      // If todoAnalyzer.analyzeFile is the one from this class, it returns a different structure.
+      // Let's assume a more direct todo analysis for now:
+      const todos = this.todoAnalyzer.analyzeFile(filePath, code); // Corrected to use analyzeFile
+      const cyclomaticComplexity = this.complexityAnalyzer.calculateCyclomaticComplexity(code);
+
+      const lines = code.split('\n');
+      const commentLines = lines.filter(line => line.trim().startsWith('//') || line.trim().startsWith('/*') || line.trim().startsWith('*') || line.trim().startsWith('*/') || line.trim().startsWith('#')).length;
+      const commentRatio = lines.length > 0 ? commentLines / lines.length : 0;
+
+      const metrics: QualityMetrics = {
+        cyclomaticComplexity,
+        todoCount: todos.length, // todos here is expected to be TodoItem[]
+        commentRatio
+      };
+
+      const report = this.qualityScorer.assess(filePath, code, metrics);
+
+      return {
+        content: [
+          { type: 'text', text: `Quality assessment for ${filePath}:` },
+          { type: 'application/json', data: report }
+        ]
+      };
+    } catch (error) {
+      console.error(`Error assessing quality for ${filePath}:`, error);
+      if (error instanceof McpError) throw error;
+      throw new McpError(ErrorCode.InternalError, `Failed to assess quality for ${filePath}: ${error.message}`);
+    }
+  }
+
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     
-    console.error('🚀 MCP Code Analyzer Server запущен!');
+    console.error('🚀 MCP Code Analyzer Server запущен!'); // This is for the StdioServerTransport
+    // The SSE server logs its own startup message.
   }
 }
 
-const server = new CodeAnalyzerServer();
+// Potentially grab port from environment variable or args if needed
+const ssePort = process.env.SSE_PORT ? parseInt(process.env.SSE_PORT, 10) : 8001;
+const server = new CodeAnalyzerServer(ssePort);
 server.run().catch(console.error);
