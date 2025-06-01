@@ -18,11 +18,16 @@ export class AIManager {
     });
   }
   
+  /**
+   * Объясняет код с использованием OpenAI или Anthropic.
+   * @param code Код для объяснения.
+   * @param language Язык программирования.
+   * @returns Объяснение кода.
+   */
   async explainCode(code: string, language: string): Promise<string> {
-    // TODO: Implement actual logic using OpenAI or Anthropic
-    // This is a placeholder implementation
-    console.log(`Explaining code in ${language}: ${code.substring(0, 50)}...`);
+    console.log(`\x1b[36mExplaining code in ${language}: ${code.substring(0, 50)}...\x1b[0m`);
     if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+      console.error(`\x1b[31mAPI keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.\x1b[0m`);
       return "Error: API keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.";
     }
     if (this.openai.apiKey) {
@@ -36,12 +41,16 @@ export class AIManager {
 ${code}` }
           ],
         });
-        return response.choices[0]?.message?.content?.trim() || "Could not get explanation from OpenAI.";
+        const explanation = response.choices[0]?.message?.content?.trim() || "Could not get explanation from OpenAI.";
+        if (response.usage) {
+          console.log(`\x1b[32mTokens used: ${response.usage.total_tokens}\x1b[0m`);
+        }
+        return explanation;
       } catch (error) {
-        console.error("Error explaining code with OpenAI:", error);
+        console.error(`\x1b[31mError explaining code with OpenAI:\x1b[0m`, error);
         // Fallback to Anthropic if OpenAI fails and Anthropic key is present
         if (this.anthropic.apiKey) {
-          console.log("OpenAI failed, trying Anthropic for explanation...");
+          console.log(`\x1b[33mOpenAI failed, trying Anthropic for explanation...\x1b[0m`);
           return this.explainWithAnthropic(code, language);
         }
         return "Error explaining code with OpenAI.";
@@ -66,16 +75,21 @@ ${code}` }
       });
       return response.content[0]?.type === 'text' ? response.content[0].text.trim() : "Could not get explanation from Anthropic.";
     } catch (error) {
-      console.error("Error explaining code with Anthropic:", error);
+    console.error(`\x1b[31mError explaining code with Anthropic:\x1b[0m`, error);
       return "Error explaining code with Anthropic.";
     }
   }
   
+  /**
+   * Предлагает улучшения для кода с использованием OpenAI или Anthropic.
+   * @param code Код для улучшения.
+   * @param language Язык программирования.
+   * @returns Массив предложений по улучшению кода.
+   */
   async suggestImprovements(code: string, language: string): Promise<string[]> {
-    // TODO: Implement actual logic using OpenAI or Anthropic
-    // This is a placeholder implementation
-    console.log(`Suggesting improvements for code: ${code.substring(0, 50)}...`);
-     if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    console.log(`\x1b[36mSuggesting improvements for code: ${code.substring(0, 50)}...\x1b[0m`);
+    if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+      console.error(`\x1b[31mAPI keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.\x1b[0m`);
       return ["Error: API keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local."];
     }
     if (this.openai.apiKey) {
@@ -90,12 +104,15 @@ ${code}` }
           ],
         });
         const suggestionsText = response.choices[0]?.message?.content?.trim();
+        if (response.usage) {
+          console.log(`\x1b[32mTokens used: ${response.usage.total_tokens}\x1b[0m`);
+        }
         return suggestionsText ? suggestionsText.split('\n').filter(s => s.length > 0) : ["Could not get suggestions from OpenAI."];
       } catch (error) {
-        console.error("Error suggesting improvements with OpenAI:", error);
+        console.error(`\x1b[31mError suggesting improvements with OpenAI:\x1b[0m`, error);
         // Fallback to Anthropic if OpenAI fails and Anthropic key is present
         if (this.anthropic.apiKey) {
-          console.log("OpenAI failed, trying Anthropic for suggestions...");
+          console.log(`\x1b[33mOpenAI failed, trying Anthropic for suggestions...\x1b[0m`);
           return this.suggestImprovementsWithAnthropic(code, language);
         }
         return ["Error suggesting improvements with OpenAI."];
@@ -121,13 +138,21 @@ ${code}` }
       const suggestionsText = response.content[0]?.type === 'text' ? response.content[0].text.trim() : "";
       return suggestionsText ? suggestionsText.split('\n').filter(s => s.length > 0) : ["Could not get suggestions from Anthropic."];
     } catch (error) {
-      console.error("Error suggesting improvements with Anthropic:", error);
+    console.error(`\x1b[31mError suggesting improvements with Anthropic:\x1b[0m`, error);
       return ["Error suggesting improvements with Anthropic."];
     }
   }
 
+  /**
+   * Обнаруживает паттерны в коде с использованием OpenAI или Anthropic.
+   * @param code Код для анализа.
+   * @param language Язык программирования.
+   * @returns Описание обнаруженных паттернов.
+   */
   async detectCodePatterns(code: string, language: string): Promise<string> {
+    console.log(`\x1b[36mDetecting code patterns in ${language}: ${code.substring(0, 50)}...\x1b[0m`);
     if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+      console.error(`\x1b[31mAPI keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.\x1b[0m`);
       return "Error: API keys not configured. Please set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env.local.";
     }
 
@@ -142,12 +167,16 @@ ${code}` }
 ${code}` }
           ],
         });
-        return response.choices[0]?.message?.content?.trim() || "Could not detect patterns from OpenAI.";
+        const patterns = response.choices[0]?.message?.content?.trim() || "Could not detect patterns from OpenAI.";
+        if (response.usage) {
+          console.log(`\x1b[32mTokens used: ${response.usage.total_tokens}\x1b[0m`);
+        }
+        return patterns;
       } catch (error) {
-        console.error("Error detecting patterns with OpenAI:", error);
+        console.error(`\x1b[31mError detecting patterns with OpenAI:\x1b[0m`, error);
         // Fallback to Anthropic if OpenAI fails and Anthropic key is present
         if (this.anthropic.apiKey) {
-          console.log("OpenAI failed, trying Anthropic for pattern detection...");
+          console.log(`\x1b[33mOpenAI failed, trying Anthropic for pattern detection...\x1b[0m`);
           return this.detectCodePatternsWithAnthropic(code, language);
         }
         return "Error detecting patterns with OpenAI.";
@@ -172,7 +201,7 @@ ${code}` }
       });
       return response.content[0]?.type === 'text' ? response.content[0].text.trim() : "Could not detect patterns from Anthropic.";
     } catch (error) {
-      console.error("Error detecting patterns with Anthropic:", error);
+    console.error(`\x1b[31mError detecting patterns with Anthropic:\x1b[0m`, error);
       return "Error detecting patterns with Anthropic.";
     }
   }
