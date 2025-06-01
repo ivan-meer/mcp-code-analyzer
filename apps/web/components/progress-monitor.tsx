@@ -1,12 +1,42 @@
 /**
  * 📊 Система мониторинга прогресса анализа
  * Интеллектуальная панель управления для отслеживания процесса анализа кода
- * 
+ *
  * Концепция архитектуры:
  * - Показываем пользователю детальную информацию о каждом этапе анализа
  * - Предоставляем визуальные индикаторы прогресса с анимациями
  * - Логируем каждый шаг для дальнейшего анализа производительности
  * - Даём пользователю ощущение контроля над процессом
+ *
+ * Основные функции:
+ * - Отображение текущего этапа анализа
+ * - Визуализация прогресса анализа с использованием индикаторов
+ * - Логирование активности анализа для последующего анализа
+ * - Предоставление пользователю информации о текущем состоянии анализа
+ *
+ * Использование:
+ * 1. Инициализация компонента с данными о прогрессе анализа.
+ * 2. Обновление данных о прогрессе анализа для отображения текущего состояния.
+ *
+ * Пример:
+ * ```typescript
+ * const progress = {
+ *   stage: 'scanning',
+ *   percentage: 45,
+ *   currentFile: 'src/index.ts',
+ *   filesProcessed: 10,
+ *   totalFiles: 20,
+ *   startTime: new Date(),
+ *   estimatedCompletion: new Date(Date.now() + 300000)
+ * };
+ *
+ * const logs = [
+ *   { timestamp: new Date(), stage: 'initializing', message: 'Начало анализа' },
+ *   { timestamp: new Date(), stage: 'scanning', message: 'Сканирование файлов' }
+ * ];
+ *
+ * <ProgressMonitor isActive={true} progress={progress} logs={logs} />
+ * ```
  */
 
 "use client"
@@ -16,13 +46,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileSearch, 
-  Brain, 
-  GitBranch, 
-  Zap, 
-  Clock, 
-  CheckCircle2, 
+import {
+  FileSearch,
+  Brain,
+  GitBranch,
+  Zap,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   Loader2,
   BarChart3,
@@ -32,7 +62,7 @@ import {
 } from 'lucide-react';
 
 // 📋 Типы этапов анализа для детального отслеживания
-type AnalysisStage = 
+type AnalysisStage =
   | 'initializing'      // Инициализация системы
   | 'scanning'          // Сканирование файлов
   | 'parsing'           // Парсинг и анализ кода
@@ -195,15 +225,43 @@ export function ProgressMonitor({ isActive, progress, logs, projectPath }: Progr
                   {progress.filesProcessed} / {progress.totalFiles} файлов
                 </span>
               </div>
-              
-              <Progress 
-                value={progress.percentage} 
+
+              <Progress
+                value={progress.percentage}
                 className="h-2"
+                color="bg-blue-500"
+                aria-valuenow={progress.percentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                style={{ background: `linear-gradient(to right, #007bff ${progress.percentage}%, #e9ecef ${progress.percentage}%)` }}
               />
-              
+
               <p className="text-xs text-slate-300">
                 {currentConfig.description}
               </p>
+
+              {/* 📊 Результаты анализа проекта */}
+              <div className="p-3 bg-slate-800/30 rounded-lg border border-slate-700">
+                <h4 className="text-sm font-medium text-slate-300 mb-2">Результаты анализа проекта</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-xs text-slate-400">Файлов:</span>
+                    <span className="text-xs text-white">{progress.totalFiles}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-slate-400">Строк кода:</span>
+                    <span className="text-xs text-white">{progress.metadata?.totalLines || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-slate-400">Функций:</span>
+                    <span className="text-xs text-white">{progress.metadata?.totalFunctions || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-slate-400">Связей:</span>
+                    <span className="text-xs text-white">{progress.metadata?.totalDependencies || 0}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 📈 Статистика производительности */}
@@ -233,26 +291,49 @@ export function ProgressMonitor({ isActive, progress, logs, projectPath }: Progr
               </div>
             </div>
 
-            {/* 📝 Лог активности (последние 3 записи) */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Лог активности
-              </h4>
-              <div className="space-y-1 max-h-20 overflow-y-auto">
-                {logs.slice(-3).map((log, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="text-xs text-slate-400 flex justify-between"
-                  >
-                    <span>{log.message}</span>
-                    <span>{log.timestamp.toLocaleTimeString()}</span>
-                  </motion.div>
-                ))}
+            {/* 📊 Граф зависимостей */}
+            <div className="p-3 bg-slate-800/30 rounded-lg border border-slate-700">
+              <h4 className="text-sm font-medium text-slate-300 mb-2">Граф зависимостей</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-400">Связей:</span>
+                  <span className="text-xs text-white">{progress.metadata?.totalDependencies || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-400">Файлов:</span>
+                  <span className="text-xs text-white">{progress.totalFiles}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-400">Функций:</span>
+                  <span className="text-xs text-white">{progress.metadata?.totalFunctions || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-slate-400">Строк кода:</span>
+                  <span className="text-xs text-white">{progress.metadata?.totalLines || 0}</span>
+                </div>
               </div>
             </div>
+
+            {/* 📝 Лог активности (последние 3 записи) */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Лог активности
+                </h4>
+                <div className="space-y-1 max-h-20 overflow-y-auto">
+                  {logs.map((log, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-xs text-slate-400 flex justify-between"
+                    >
+                      <span>{log.message}</span>
+                      <span>{log.timestamp.toLocaleTimeString()}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
 
             {/* 🎯 Текущий файл (если доступен) */}
             {progress.currentFile && (
