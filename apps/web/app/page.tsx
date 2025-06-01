@@ -9,7 +9,7 @@ import { ProjectInput } from '@/components/project-input-redesigned';
 import { LoadingState } from '@/components/loading-state';
 import { ModernFooter } from '@/components/modern-footer';
 import { AIStatusCard } from '@/components/ai-status-card';
-import { AnalysisResults } from '@/components/analysis-results-simple';
+import { AnalysisResults } from '@/components/analysis-results-redesigned';
 import { generateSampleReactProject, generateSamplePythonProject } from '@/lib/sample-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -459,16 +459,8 @@ function HomePageContent() {
 
                 <Card className="glass border-purple-500/20">
                   <CardHeader>
-                    <CardTitle className="text-gradient flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: demoType === 'react' ? '#61dafb' : '#3776ab' }}
-                      >
-                        {demoType === 'react' ? <Code2 className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
-                      </div>
-                      Результаты анализа проекта
-                    </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    {/* Удаленный CardTitle находился здесь */}
+                    <CardDescription className="text-slate-400 pt-4"> {/* Added pt-4 for spacing if needed, adjust as necessary */}
                       {showDemo ? 'Демонстрационный анализ архитектуры проекта' : analysisResult.project_path}
                     </CardDescription>
                   </CardHeader>
