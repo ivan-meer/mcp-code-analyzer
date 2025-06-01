@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
         }
       }, 30000);
 
-      // Подключаемся к SSE потоку FastAPI сервера через fetch
-      const response = await fetch(`http://localhost:8000/api/analyze/progress?id=${projectId!}`, {
+      // Подключаемся к SSE потоку нового Node.js SSE сервера через fetch
+      const response = await fetch(`http://localhost:8001/api/analyze/progress/${projectId!}`, { // Port and path updated
         headers: {
           'Accept': 'text/event-stream',
         }

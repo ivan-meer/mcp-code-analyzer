@@ -28,6 +28,18 @@ import {
   Lightbulb
 } from 'lucide-react';
 
+// Define the structure of the SSE progress events
+interface SseProgressEvent {
+  projectId: string;
+  stage: 'initializing' | 'scanning' | 'parsing' | 'ai-processing' | 'generating-insights' | 'completed' | 'error';
+  percentage: number;
+  currentFile?: string;
+  filesProcessed?: number;
+  totalFiles?: number;
+  logMessage?: string;
+  // metadata?: any; // Optional: if backend sends additional metadata
+}
+
 interface ProjectAnalysis {
   project_path: string;
   files: Array<{
@@ -69,7 +81,9 @@ function HomePageContent() {
 
   // Новое: состояние для projectId и прогресса анализа
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [progress, setProgress] = useState<any>(null);
+  const [progress, setProgress] = useState<SseProgressEvent | null>(null); // Updated type
+  const [analysisStartTime, setAnalysisStartTime] = useState<Date | null>(null); // For tracking start time
+  const [progressLogs, setProgressLogs] = useState<Array<{timestamp: Date; stage: SseProgressEvent['stage']; message: string}>>([]); // For storing logs
   const sseRef = React.useRef<EventSource | null>(null);
 
   // 🔔 Подключаемся к системе уведомлений
@@ -131,7 +145,11 @@ function HomePageContent() {
     // Генерируем projectId для анализа и SSE
     const newProjectId = Math.random().toString(36).slice(2) + Date.now();
     setProjectId(newProjectId);
+
+    // Reset states for new analysis
     setProgress(null);
+    setAnalysisStartTime(new Date()); // Set start time
+    setProgressLogs([]); // Clear previous logs
 
     // 🚀 Начинаем анализ с уведомлениями
     const progressId = notifyProgress(
@@ -162,30 +180,48 @@ function HomePageContent() {
     sseRef.current = sse;
     sse.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data: SseProgressEvent = JSON.parse(event.data);
         setProgress(data);
-      } catch {}
+        if (data.logMessage) {
+          setProgressLogs(prevLogs => [...prevLogs, { timestamp: new Date(), stage: data.stage, message: data.logMessage }]);
+        }
+        // Close SSE connection on completion or error from server-sent event
+        if (data.stage === 'completed' || data.stage === 'error') {
+          if (sseRef.current) {
+            sseRef.current.close();
+            sseRef.current = null;
+            console.log(`SSE connection closed due to stage: ${data.stage}`);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing SSE message:', e);
+      }
     };
-    sse.onerror = () => {
-      sse.close();
-      sseRef.current = null;
+    sse.onerror = (err) => {
+      console.error('SSE connection error:', err);
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+      // Optionally, notify the user or set an error state for SSE connection failure
+      // For now, it just closes. Backend errors during analysis will be sent as 'error' stage events.
     };
 
     try {
       // 🚀 Переключаемся на мощный FastAPI сервер с AI интеграцией
-      console.log('🎯 Начинаем интеллектуальный анализ проекта:', cleanedPath);
+      console.log('🎯 Начинаем интеллектуальный анализ проекта:', cleanedPath, 'Project ID:', newProjectId);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/analyze`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'; // This is for the main analysis API call
+      const response = await fetch(`${apiUrl}/api/analyze`, { // Ensure this is the correct API endpoint for starting analysis
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          path: cleanedPath,
+          projectPath: cleanedPath, // Backend expects `projectPath` based on previous subtask
           projectId: newProjectId,
-          include_tests: true,
-          analysis_depth: 'medium'
+          includeTests: true, // Backend expects `includeTests`
+          analysisDepth: 'medium' // Backend expects `analysisDepth`
         }),
       });
 
@@ -466,36 +502,20 @@ function HomePageContent() {
         )}
         
         {/* 🔄 Интеллектуальная система мониторинга прогресса */}
-        <ProgressMonitor 
+        <ProgressMonitor
+          projectPath={projectPath} // Added projectPath prop
           isActive={isAnalyzing && !showDemo}
           progress={{
-            stage: progress?.status === 'completed'
-              ? 'completed'
-              : isAnalyzing
-                ? 'scanning'
-                : 'completed',
-            percentage: progress?.percentage ?? (analysisResult ? 100 : 0),
-            filesProcessed: progress?.filesProcessed ?? (analysisResult ? analysisResult.metrics.total_files : 0),
-            totalFiles: progress?.totalFiles ?? (analysisResult ? analysisResult.metrics.total_files : 0),
-            startTime: new Date(),
-            estimatedCompletion: progress?.status === 'completed' ? new Date() : undefined,
-            currentFile: undefined,
-            metadata: {}
+            stage: progress?.stage ?? (isAnalyzing ? 'initializing' : 'completed'),
+            percentage: progress?.percentage ?? (analysisResult ? 100 : (isAnalyzing ? 0 : 100)),
+            filesProcessed: progress?.filesProcessed ?? 0,
+            totalFiles: progress?.totalFiles ?? 0,
+            currentFile: progress?.currentFile ?? '',
+            startTime: analysisStartTime || new Date(), // Use state here
+            estimatedCompletion: progress?.stage === 'completed' ? new Date() : undefined,
+            metadata: progress?.metadata ?? {} // Assuming metadata might come from SSE (progress.metadata needs to be part of SseProgressEvent if used)
           }}
-          logs={
-            progress
-              ? [
-                  {
-                    timestamp: new Date(),
-                    stage: progress.status === 'completed' ? 'completed' : 'scanning',
-                    message: progress.status === 'completed'
-                      ? 'Анализ успешно завершён'
-                      : `Обработано файлов: ${progress.filesProcessed ?? 0} / ${progress.totalFiles ?? 0}`,
-                    duration: undefined
-                  }
-                ]
-              : []
-          }
+          logs={progressLogs.slice(-10)} // Show last 10 log messages
         />
       </main>
       {/* End of Main Content */}
