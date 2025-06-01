@@ -48,7 +48,15 @@ export async function GET(request: NextRequest) {
       }, 30000);
 
       // Подключаемся к SSE потоку нового Node.js SSE сервера через fetch
-      const response = await fetch(`http://localhost:8001/api/analyze/progress/${projectId!}`, { // Port and path updated
+      // Нормализуем projectId и проверяем его валидность
+      const normalizedProjectId = projectId.replace(/\\/g, '/').trim();
+      if (!normalizedProjectId || normalizedProjectId.includes('..')) {
+        console.error('Invalid project path:', normalizedProjectId);
+        controller.close();
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8000/api/analyze/progress/${encodeURIComponent(normalizedProjectId)}`, {
         headers: {
           'Accept': 'text/event-stream',
         }

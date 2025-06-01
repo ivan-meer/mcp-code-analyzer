@@ -37,6 +37,7 @@ interface FileItemProps {
   searchTerm?: string;
   onSelect?: (file: ProjectFile) => void;
   onView?: (file: ProjectFile) => void;
+  onNavigate?: (filePath: string, line?: number) => void;
   onCopyPath?: (path: string) => void;
   className?: string;
 }
@@ -234,21 +235,21 @@ export const FileItem: React.FC<FileItemProps> = memo(({
         {/* Основная информация */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <HighlightedText
-              text={file.name}
-              searchTerm={searchTerm}
-              className="font-medium text-slate-900 dark:text-slate-100 truncate"
-            />
+<HighlightedText
+  text={file.name}
+  searchTerm={searchTerm}
+  className="font-medium text-slate-900 dark:text-slate-100 truncate"
+/>
             <Badge variant="secondary" className="ml-2 text-xs">
               {file.type}
             </Badge>
           </div>
           {showPath && (
-            <HighlightedText
-              text={file.path}
-              searchTerm={searchTerm}
-              className="text-xs text-slate-500 dark:text-slate-400 truncate"
-            />
+<HighlightedText
+  text={file.path}
+  searchTerm={searchTerm}
+  className="text-xs text-slate-500 dark:text-slate-400 truncate"
+/>
           )}
         </div>
 
@@ -304,12 +305,11 @@ export const FileItem: React.FC<FileItemProps> = memo(({
 
         {/* Путь к файлу */}
         {showPath && (
-          <HighlightedText
-            text={file.path}
-            searchTerm={searchTerm}
-            className="text-sm text-slate-600 dark:text-slate-400 mb-3 block truncate"
-            title={file.path}
-          />
+<HighlightedText
+  text={file.path}
+  searchTerm={searchTerm}
+  className="text-sm text-slate-600 dark:text-slate-400 mb-3 block truncate"
+/>
         )}
 
         {/* Метрики */}
@@ -368,12 +368,11 @@ export const FileItem: React.FC<FileItemProps> = memo(({
             </div>
 
             {showPath && (
-              <HighlightedText
-                text={file.path}
-                searchTerm={searchTerm}
-                className="text-sm text-slate-600 dark:text-slate-400 mb-3 block"
-                title={file.path}
-              />
+<HighlightedText
+  text={file.path}
+  searchTerm={searchTerm}
+  className="text-sm text-slate-600 dark:text-slate-400 mb-3 block"
+/>
             )}
 
             {showMetrics && (
@@ -466,12 +465,11 @@ export const FileItem: React.FC<FileItemProps> = memo(({
           </Badge>
         </div>
         {showPath && (
-          <HighlightedText
-            text={file.path}
-            searchTerm={searchTerm}
-            className="text-sm text-slate-600 dark:text-slate-400 truncate"
-            title={file.path}
-          />
+<HighlightedText
+  text={file.path}
+  searchTerm={searchTerm}
+  className="text-sm text-slate-600 dark:text-slate-400 truncate"
+/>
         )}
         {showMetrics && (
           <FileMetrics file={file} variant="inline" className="mt-2" />

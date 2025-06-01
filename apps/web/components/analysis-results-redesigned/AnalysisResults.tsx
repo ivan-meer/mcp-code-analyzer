@@ -34,10 +34,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { ProjectAnalysis, AnalysisTab } from '@/types/analysis.types';
+import { ProjectTodo } from '@/types/todos.types';
 import { ProjectVisualization } from '@/components/visualization/project-visualization';
 import { FilesSection } from './sections/FilesSection';
 import { DependenciesSection } from './sections/DependenciesSection';
-import { TodosSection } from './sections/TodosSection';
+import { TodosSection } from '../todos/TodosSection';
 import { DocumentationSection } from './sections/DocumentationSection';
 import { exportAnalysisData, createDefaultExportOptions } from '@/utils/export.utils';
 
@@ -465,7 +466,7 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
 
               <TabsContent value={AnalysisTab.TODOS} className="mt-0">
                 <TodosSection
-                  todos={analysisResult.all_todos || []}
+                  todos={analysisResult.all_todos as ProjectTodo[] || []}
                   projectPath={analysisResult.project_path}
                   onFileNavigate={handleFileNavigation}
                 />

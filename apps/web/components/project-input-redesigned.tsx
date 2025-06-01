@@ -128,17 +128,52 @@ export function ProjectInput({
     }
   }, [setProjectPath]);
 
-  const handleAnalyze = useCallback(() => {
-    console.log('Button clicked');
+  const [apiAvailable, setApiAvailable] = useState(true);
+
+  const checkApiAvailability = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/ai-status');
+      setApiAvailable(response.ok);
+      return response.ok;
+    } catch (error) {
+      setApiAvailable(false);
+      return false;
+    }
+  }, []);
+
+  const handleAnalyze = useCallback(async () => {
+    console.log('Button clicked - projectPath:', projectPath);
     if (!projectPath) {
+      console.error('Project path is empty');
       return;
     }
-    analyzeProject();
-  }, [projectPath, analyzeProject]);
 
-  console.log('DEBUG ProjectInput:', { projectPath, isAnalyzing, error, analyzeProjectType: typeof analyzeProject, projectPathType: typeof projectPath });
+    const isApiAvailable = await checkApiAvailability();
+    if (!isApiAvailable) {
+      console.error('API is not available');
+      return;
+    }
+
+    console.log('Starting analysis with path:', projectPath);
+    analyzeProject();
+  }, [projectPath, analyzeProject, checkApiAvailability]);
+
+  console.log('DEBUG ProjectInput:', {
+    projectPath,
+    isAnalyzing,
+    error,
+    analyzeProjectType: typeof analyzeProject,
+    projectPathType: typeof projectPath,
+    apiAvailable
+  });
+  
   const isValidPath = typeof projectPath === 'string' && projectPath.trim().length > 0;
-  console.log('isValidPath:', isValidPath, 'projectPath:', projectPath, 'typeof:', typeof projectPath);
+  console.log('Validation:', {
+    isValidPath,
+    projectPath,
+    pathType: typeof projectPath,
+    apiAvailable
+  });
 
   return (
     <motion.div 
