@@ -1,16 +1,36 @@
 /**
  * Основной компонент результатов анализа (рефакторированная версия)
- * 
+ *
  * Этот компонент является главным контейнером для всех секций анализа проекта.
  * Он организует и координирует работу всех подкомпонентов, управляет общим
  * состоянием и предоставляет единообразный интерфейс для пользователя.
- * 
+ *
+ * Поддерживаемые секции анализа:
+ * 1. Визуализация - интерактивные графики проекта
+ * 2. Файлы - структура и содержимое файлов
+ * 3. Зависимости - связи между модулями
+ * 4. TODO/FIXME - задачи в коде
+ * 5. Документация - извлеченная документация
+ * 6. Дубликаты - дублирующиеся файлы (новое)
+ *
  * Принципы архитектуры:
  * 1. Композиция - компонент строится из независимых секций
  * 2. Единственная ответственность - каждая секция отвечает за свою область
  * 3. Управляемое состояние - централизованное управление активными вкладками
  * 4. Прогрессивное раскрытие - пользователь видит только нужную информацию
  * 5. Доступность - полная поддержка клавиатурной навигации и скринридеров
+ *
+ * Формат данных для DuplicatesSection:
+ * [
+ *   {
+ *     hash: string, // SHA-256 хеш содержимого
+ *     size: number, // Размер файла в байтах
+ *     files: Array<{
+ *       path: string, // Относительный путь
+ *       lines: number[] // Номера строк с дубликатами
+ *     }>
+ *   }
+ * ]
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -18,7 +38,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Download, Settings, Share2, Bookmark,
   BarChart3, Files, GitBranch, CheckSquare, BookOpen,
-  HelpCircle, Zap, Target, TrendingUp
+  HelpCircle, Zap, Target, TrendingUp, Copy
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,11 +54,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { ProjectAnalysis, AnalysisTab } from '@/types/analysis.types';
+import { ProjectTodo } from '@/types/todos.types';
 import { ProjectVisualization } from '@/components/visualization/project-visualization';
-import { FilesSection } from './sections/FilesSection';
-import { DependenciesSection } from './sections/DependenciesSection';
-import { TodosSection } from './sections/TodosSection';
-import { DocumentationSection } from './sections/DocumentationSection';
+import {
+  FilesSection,
+  DependenciesSection,
+  DocumentationSection,
+  DuplicatesSection
+} from './sections';
+import { TodosSection } from '../todos/TodosSection';
 import { exportAnalysisData, createDefaultExportOptions } from '@/utils/export.utils';
 
 interface AnalysisResultsProps {
@@ -251,6 +275,13 @@ const TAB_CONFIGS = {
     icon: BookOpen,
     description: 'Автоматически извлеченная документация',
     shortcut: '5'
+  },
+  [AnalysisTab.DUPLICATES]: {
+    id: AnalysisTab.DUPLICATES,
+    label: 'Дубликаты',
+    icon: Copy,
+    description: 'Дублирующиеся файлы в проекте',
+    shortcut: '6'
   }
 } as const;
 
@@ -331,12 +362,14 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
           </Button>
           
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Результаты анализа
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              {analysisResult.project_path}
-            </p>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                Результаты анализа проекта
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {analysisResult.project_path}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -405,6 +438,8 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                     return (analysisResult.all_todos?.length || 0) > 0;
                   case AnalysisTab.DOCUMENTATION:
                     return (analysisResult.project_documentation?.length || 0) > 0;
+                  case AnalysisTab.DUPLICATES:
+                    return (analysisResult.file_duplicates?.length || 0) > 0;
                   default:
                     return true;
                 }
@@ -465,7 +500,7 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
 
               <TabsContent value={AnalysisTab.TODOS} className="mt-0">
                 <TodosSection
-                  todos={analysisResult.all_todos || []}
+                  todos={analysisResult.all_todos as ProjectTodo[] || []}
                   projectPath={analysisResult.project_path}
                   onFileNavigate={handleFileNavigation}
                 />
@@ -474,6 +509,14 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
               <TabsContent value={AnalysisTab.DOCUMENTATION} className="mt-0">
                 <DocumentationSection
                   documentation={analysisResult.project_documentation || []}
+                  projectPath={analysisResult.project_path}
+                  onFileNavigate={handleFileNavigation}
+                />
+              </TabsContent>
+
+              <TabsContent value={AnalysisTab.DUPLICATES} className="mt-0">
+                <DuplicatesSection
+                  duplicates={analysisResult.file_duplicates || []}
                   projectPath={analysisResult.project_path}
                   onFileNavigate={handleFileNavigation}
                 />

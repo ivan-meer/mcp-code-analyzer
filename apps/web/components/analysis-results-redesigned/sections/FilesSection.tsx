@@ -44,6 +44,7 @@ interface FilesSectionProps {
   projectPath: string;
   onFileSelect?: (file: ProjectFile) => void;
   onFileView?: (file: ProjectFile) => void;
+  onFileNavigate: (filePath: string, line?: number) => void;
   className?: string;
 }
 
@@ -108,8 +109,9 @@ const FilesStatistics: React.FC<{ files: ProjectFile[] }> = ({ files }) => {
 const DirectoryTree: React.FC<{
   files: ProjectFile[];
   onFileSelect?: (file: ProjectFile) => void;
+  onFileNavigate: (filePath: string, line?: number) => void;
   searchTerm?: string;
-}> = ({ files, onFileSelect, searchTerm }) => {
+}> = ({ files, onFileSelect, onFileNavigate, searchTerm }) => {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
 
   // Группируем файлы по директориям
@@ -175,15 +177,16 @@ const DirectoryTree: React.FC<{
                 >
                   <div className="p-2 space-y-1">
                     {dirFiles.map(file => (
-                      <FileItem
-                        key={file.path}
-                        file={file}
-                        variant="compact"
-                        showPath={false}
-                        searchTerm={searchTerm}
-                        onSelect={onFileSelect}
-                        className="border-0 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700"
-                      />
+<FileItem
+  key={file.path}
+  file={file}
+  variant="compact"
+  showPath={false}
+  searchTerm={searchTerm}
+  onSelect={onFileSelect}
+  onNavigate={onFileNavigate}
+  className="border-0 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700"
+/>
                     ))}
                   </div>
                 </motion.div>
@@ -204,6 +207,7 @@ export const FilesSection: React.FC<FilesSectionProps> = ({
   projectPath,
   onFileSelect,
   onFileView,
+  onFileNavigate,
   className = ''
 }) => {
   // Состояние компонента
@@ -408,23 +412,24 @@ export const FilesSection: React.FC<FilesSectionProps> = ({
         {/* Контент в зависимости от режима отображения */}
         <div className="files-content">
           {viewMode === 'tree' ? (
-            <DirectoryTree
-              files={sortedFiles}
-              onFileSelect={handleFileSelect}
-              searchTerm={search.query}
-            />
+<DirectoryTree
+  files={sortedFiles}
+  onFileSelect={handleFileSelect}
+  onFileNavigate={onFileNavigate}
+  searchTerm={search.query}
+/>
           ) : (
-            <VirtualList
-              items={sortedFiles}
-              renderItem={renderFileItem}
-              height={600}
-              itemHeight={viewMode === 'grid' ? 200 : 80}
-              className={viewMode === 'grid' ? 'grid-mode' : 'list-mode'}
-              emptyMessage="Файлы не найдены. Попробуйте изменить критерии поиска."
-              showScrollIndicator={sortedFiles.length > 100}
-              animateItems={sortedFiles.length < 50}
-              ariaLabel="Список файлов проекта"
-            />
+<VirtualList
+  items={sortedFiles}
+  renderItem={renderFileItem}
+  height={600}
+  itemHeight={viewMode === 'grid' ? 200 : 80}
+  className={viewMode === 'grid' ? 'grid-mode' : 'list-mode'}
+  emptyMessage="Файлы не найдены. Попробуйте изменить критерии поиска."
+  showScrollIndicator={sortedFiles.length > 100}
+  animateItems={sortedFiles.length < 50}
+  ariaLabel="Список файлов проекта"
+/>
           )}
         </div>
 

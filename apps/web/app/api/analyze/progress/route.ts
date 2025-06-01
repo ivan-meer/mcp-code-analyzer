@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
+import { calculateFileHash } from '@/lib/hash-utils';
+import type { DuplicateGroup } from '@/types/analysis.types';
 
 let lastProgress: { [key: string]: any } = {};
+let fileHashes: Map<string, string> = new Map();
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -47,8 +50,19 @@ export async function GET(request: NextRequest) {
         }
       }, 30000);
 
-      // Подключаемся к SSE потоку FastAPI сервера через fetch
-      const response = await fetch(`http://localhost:8000/api/analyze/progress?id=${projectId!}`, {
+      // Подключаемся к SSE потоку нового Node.js SSE сервера через fetch
+      // Нормализуем projectId и проверяем его валидность
+      const normalizedProjectId = projectId.replace(/\\/g, '/').trim();
+      if (!normalizedProjectId || normalizedProjectId.includes('..')) {
+        console.error('Invalid project path:', normalizedProjectId);
+        controller.close();
+        return;
+      }
+
+      // Инициализация анализа дубликатов
+      fileHashes = new Map();
+
+      const response = await fetch(`http://localhost:8000/api/analyze/progress/${encodeURIComponent(normalizedProjectId)}`, {
         headers: {
           'Accept': 'text/event-stream',
         }
@@ -87,6 +101,13 @@ async function readStream() {
             sendProgress(progress);
 
             if (progress.status === 'completed') {
+              // Добавляем информацию о дубликатах перед завершением
+              const duplicates = findDuplicates(fileHashes);
+              if (duplicates.length > 0) {
+                progress.file_duplicates = duplicates;
+                sendProgress(progress);
+              }
+
               clearInterval(heartbeatInterval);
               if (controller.desiredSize !== null) {
                 controller.close();
@@ -136,4 +157,34 @@ async function readStream() {
 
 export function updateProgress(projectId: string, progress: any) {
   lastProgress[projectId] = progress;
+}
+
+function findDuplicates(hashes: Map<string, string>) {
+  const hashMap: Map<string, string[]> = new Map();
+  const duplicates: DuplicateGroup[] = [];
+
+  // Собираем группы файлов с одинаковыми хешами
+  hashes.forEach((hash, filePath) => {
+    if (!hashMap.has(hash)) {
+      hashMap.set(hash, [filePath]);
+    } else {
+      hashMap.get(hash)!.push(filePath);
+    }
+  });
+
+  // Преобразуем в формат DuplicateGroup
+  hashMap.forEach((files, hash) => {
+    if (files.length > 1) {
+      duplicates.push({
+        hash,
+        size: 0, // TODO: добавить реальный размер файла
+        files: files.map(path => ({
+          path,
+          lines: [] // TODO: добавить номера строк дубликатов
+        }))
+      });
+    }
+  });
+
+  return duplicates;
 }

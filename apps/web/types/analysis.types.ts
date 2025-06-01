@@ -81,6 +81,7 @@ export interface ProjectAnalysis {
   architecture_patterns: string[]; // Найденные архитектурные паттерны (MVC, MVVM, etc.)
   all_todos?: ProjectTodo[];       // Все найденные TODO/FIXME комментарии
   project_documentation?: DocFile[]; // Извлеченная документация из кода
+  file_duplicates?: DuplicateGroup[]; // Группы дублирующихся файлов (файлы с одинаковым содержимым)
 }
 
 // Дополнительные типы для улучшенного UI
@@ -131,10 +132,22 @@ export enum AnalysisTab {
   FILES = 'files',
   DEPENDENCIES = 'dependencies',
   TODOS = 'todos',
-  DOCUMENTATION = 'documentation'
+  DOCUMENTATION = 'documentation',
+  DUPLICATES = 'duplicates'
 }
 
 // Конфигурация вкладки
+export interface DuplicateFile {
+  path: string; // Относительный путь
+  lines: number[]; // Номера строк с дубликатами
+}
+
+export interface DuplicateGroup {
+  hash: string; // SHA-256 хеш содержимого
+  size: number; // Размер файла в байтах
+  files: DuplicateFile[];
+}
+
 export interface TabConfig {
   id: AnalysisTab;
   label: string;
