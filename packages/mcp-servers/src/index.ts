@@ -116,14 +116,59 @@ class CodeAnalyzerServer {
           this.handleSseConnection(req, res, reqUrl);
           return;
         }
+        if (reqUrl.pathname === '/api/file-content' && req.method === 'GET') {
+          this.handleGetFileContentHttpRequest(req, res, reqUrl);
+          return;
+        }
       }
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Not Found' }));
     });
 
     this.sseHttpServer.listen(this.ssePort, () => {
-      console.log(`🚀 SSE server listening on http://localhost:${this.ssePort}/api/analyze/progress/:projectId`);
+      console.log(`🚀 Main HTTP server (SSE, File Content) listening on http://localhost:${this.ssePort}`);
     });
+  }
+
+  private async handleGetFileContentHttpRequest(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
+    const filePath = url.searchParams.get('path');
+    if (!filePath) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing filePath query parameter' }));
+      return;
+    }
+
+    try {
+      // We can directly call the internal MCP tool handler logic here
+      const result = await this.getFileContent({ filePath });
+      // The result from getFileContent is { content: [{ type: 'text', text: fileContent }] }
+      // We need to extract the actual text content.
+      if (result.content && result.content.length > 0 && result.content[0].type === 'text') {
+        res.writeHead(200, { 'Content-Type': 'application/json' }); // Send as JSON for consistency
+        res.end(JSON.stringify({ content: result.content[0].text }));
+      } else {
+        // This case should ideally not happen if getFileContent works as expected
+        console.error('Unexpected result structure from getFileContent:', result);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error: Could not retrieve file content in expected format.' }));
+      }
+    } catch (error) {
+      // Handle errors, including McpError
+      if (error instanceof McpError) {
+        // Map McpError codes to HTTP status codes
+        let statusCode = 500;
+        if (error.code === ErrorCode.InvalidRequest) statusCode = 400;
+        else if (error.code === ErrorCode.PermissionDenied) statusCode = 403;
+        // ErrorCode.NotFound is not explicitly defined in sdk/types, assume InvalidRequest for file not found
+
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message, code: error.code }));
+      } else {
+        console.error(`Unhandled error in handleGetFileContentHttpRequest for ${filePath}:`, error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error while fetching file content.' }));
+      }
+    }
   }
 
   private handleSseConnection(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
@@ -238,6 +283,20 @@ class CodeAnalyzerServer {
             required: ['filePath']
           },
           // outputSchema: { type: 'application/json' } // Example if SDK supports it
+        },
+        {
+          name: 'get_file_content',
+          description: 'Fetches the content of a specified file.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: {
+                type: 'string',
+                description: 'The absolute path to the file'
+              }
+            },
+            required: ['filePath']
+          }
         }
       ]
     }));
@@ -258,6 +317,9 @@ class CodeAnalyzerServer {
 
           case 'assess_file_quality':
             return await this.assessFileQuality(args as { filePath: string });
+
+          case 'get_file_content':
+            return await this.getFileContent(args as { filePath: string });
 
           default:
             throw new McpError(
@@ -354,6 +416,17 @@ class CodeAnalyzerServer {
     }
 
     const totalFiles = allFoundFiles.length;
+
+    // Notify if project is large
+    if (totalFiles > 500) {
+      const largeProjectLogMessage = `Project contains ${totalFiles} files, which is more than 500. Full analysis will proceed.`;
+      this.sendProgress(projectId, {
+        stage: 'scanning',
+        percentage: 4, // Mid-scanning, before scan completion percentage
+        totalFiles,
+        logMessage: largeProjectLogMessage
+      });
+    }
 
     // Handle "No files found" scenario
     if (totalFiles === 0) {
@@ -744,6 +817,37 @@ class CodeAnalyzerServer {
       console.error(`Error assessing quality for ${filePath}:`, error);
       if (error instanceof McpError) throw error;
       throw new McpError(ErrorCode.InternalError, `Failed to assess quality for ${filePath}: ${error.message}`);
+    }
+  }
+
+  private async getFileContent(args: { filePath: string }): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const { filePath } = args;
+    try {
+      // Basic security check: prevent path traversal
+      // This is a very basic check and might need to be more robust depending on where projectPath comes from
+      // For now, assuming filePath is usually derived from a trusted project analysis context
+      if (filePath.includes('..')) {
+        throw new McpError(ErrorCode.InvalidRequest, 'Invalid file path (path traversal detected).');
+      }
+
+      const fileContent = await fs.readFile(filePath, 'utf-8');
+      return {
+        content: [
+          {
+            type: 'text',
+            text: fileContent
+          }
+        ]
+      };
+    } catch (error) {
+      console.error(`Error reading file ${filePath}:`, error);
+      if (error.code === 'ENOENT') {
+        throw new McpError(ErrorCode.InvalidRequest, `File not found: ${filePath}`);
+      } else if (error.code === 'EACCES') {
+        throw new McpError(ErrorCode.PermissionDenied, `Permission denied for file: ${filePath}`);
+      }
+      if (error instanceof McpError) throw error; // Re-throw if already an McpError
+      throw new McpError(ErrorCode.InternalError, `Failed to read file ${filePath}: ${error.message}`);
     }
   }
 
