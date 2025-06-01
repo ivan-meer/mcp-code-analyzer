@@ -88,7 +88,8 @@ class AdvancedAnalyticsLogger:
             
             # Также выводим в консоль для разработки
             console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
+            # Используем ColoredFormatter для консоли
+            console_handler.setFormatter(ColoredFormatter())
             self.logger.addHandler(console_handler)
     
     def generate_event_id(self) -> str:
@@ -132,6 +133,14 @@ class AdvancedAnalyticsLogger:
         log_data["performance"] = asdict(event.performance_metrics) if event.performance_metrics else None
 
         self.logger.info(f"EVENT | {json.dumps(log_data, ensure_ascii=False)}")
+
+        # 📝 Если анализ завершен, выводим сводку в консоль
+        if event.event_type == EventType.ANALYSIS_COMPLETE:
+            print("\n--- Analysis Complete Summary ---")
+            summary = self.get_analytics_summary(session_id=event.user_session_id)
+            for key, value in summary.items():
+                print(f"{key}: {value}")
+            print("--- End Analysis Complete Summary ---\n")
         
         # 🎯 Обновляем статистику сессии
         if event.user_session_id:
