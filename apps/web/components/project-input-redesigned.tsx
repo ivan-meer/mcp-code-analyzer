@@ -32,13 +32,15 @@ export function ProjectInput({
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [clientSupportsFileSystemAPI, setClientSupportsFileSystemAPI] = useState(false);
 
-  // Проверка поддержки File System API
-  const supportsFileSystemAPI = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+  React.useEffect(() => {
+    setClientSupportsFileSystemAPI(typeof window !== 'undefined' && 'showDirectoryPicker' in window);
+  }, []);
 
   // Выбор папки через File System API
   const handleSelectFolder = useCallback(async () => {
-    if (!supportsFileSystemAPI) {
+    if (!clientSupportsFileSystemAPI) {
       fileInputRef.current?.click();
       return;
     }
@@ -69,7 +71,7 @@ export function ProjectInput({
         console.error('Ошибка выбора папки:', err);
       }
     }
-  }, [supportsFileSystemAPI, setProjectPath]);
+  }, [clientSupportsFileSystemAPI, setProjectPath]);
 
   // Fallback для браузеров без File System API
   const handleFileInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,7 +247,7 @@ export function ProjectInput({
                   Выбрать папку
                 </Button>
 
-                {!supportsFileSystemAPI && (
+                {!clientSupportsFileSystemAPI && (
                   <Button
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
