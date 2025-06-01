@@ -8,6 +8,8 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
+import { TodoAnalyzer, TodoItem } from './analyzers/todo-analyzer';
+import { ComplexityAnalyzer } from './analyzers/complexity-analyzer';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { glob } from 'glob';
@@ -21,6 +23,8 @@ interface FileAnalysis {
   functions: string[];
   imports: string[];
   exports: string[];
+  todos?: TodoItem[];
+  cyclomaticComplexity?: number;
 }
 
 interface ProjectAnalysis {
@@ -43,6 +47,8 @@ interface ProjectAnalysis {
 
 class CodeAnalyzerServer {
   private server: Server;
+  private todoAnalyzer: TodoAnalyzer;
+  private complexityAnalyzer: ComplexityAnalyzer;
 
   constructor() {
     this.server = new Server(
@@ -52,6 +58,8 @@ class CodeAnalyzerServer {
       }
     );
 
+    this.todoAnalyzer = new TodoAnalyzer();
+    this.complexityAnalyzer = new ComplexityAnalyzer();
     this.setupToolHandlers();
     
     // Error handling
@@ -255,18 +263,41 @@ class CodeAnalyzerServer {
     try {
       const analysis = await this.analyzeFileInternal(filePath, 'deep');
       
+      // Prepare details from the new analyzers
+      const todosCount = analysis.todos?.length || 0;
+      const todosSummary = todosCount > 0
+        ? ` (${todosCount} TODOs/Issues found)`
+        : '';
+      const complexityScore = analysis.cyclomaticComplexity !== undefined
+        ? `
+- Cyclomatic Complexity: ${analysis.cyclomaticComplexity}`
+        : '';
+
       return {
         content: [
           {
             type: 'text',
-            text: `📄 **Анализ файла: ${analysis.name}**\n\n- Тип: ${analysis.type}\n- Размер: ${(analysis.size / 1024).toFixed(1)} KB\n- Строк кода: ${analysis.linesOfCode}\n- Функций: ${analysis.functions.length}\n- Импортов: ${analysis.imports.length}\n- Экспортов: ${analysis.exports.length}`
+            text: `📄 **Анализ файла: ${analysis.name}**
+
+- Тип: ${analysis.type}
+- Размер: ${(analysis.size / 1024).toFixed(1)} KB
+- Строк кода: ${analysis.linesOfCode}${complexityScore}
+- Функций: ${analysis.functions.length}
+- Импортов: ${analysis.imports.length}
+- Экспортов: ${analysis.exports.length}${todosSummary}`
+          },
+          { // Optionally, include the full analysis object as JSON for detailed view
+            type: 'application/json', // Or 'text' if it should be displayed as stringified JSON
+            text: JSON.stringify(analysis, null, 2)
           }
         ]
       };
     } catch (error) {
+      // Ensure error is an instance of Error before accessing message
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new McpError(
         ErrorCode.InvalidRequest,
-        `Cannot analyze file: ${error}`
+        `Cannot analyze file: ${errorMessage}`
       );
     }
   }
@@ -284,8 +315,9 @@ class CodeAnalyzerServer {
     let functions: string[] = [];
     let imports: string[] = [];
     let exports: string[] = [];
+    let todos: TodoItem[] = []; // Added
+    let cyclomaticComplexity: number = 0; // Added
 
-    // Читаем содержимое для текстовых файлов
     const textExtensions = ['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json'];
     
     if (textExtensions.includes(fileExt)) {
@@ -294,18 +326,23 @@ class CodeAnalyzerServer {
         linesOfCode = content.split('\n').length;
 
         if (depth !== 'basic') {
-          // Анализируем JavaScript/TypeScript файлы
+          // Analyze JavaScript/TypeScript files
           if (['js', 'ts', 'jsx', 'tsx'].includes(fileExt)) {
             functions = this.extractJSFunctions(content);
             imports = this.extractJSImports(content);
             exports = this.extractJSExports(content);
           }
-          
-          // Анализируем Python файлы
+          // Analyze Python files
           else if (fileExt === 'py') {
             functions = this.extractPythonFunctions(content);
             imports = this.extractPythonImports(content);
+            // Python exports are more complex (not simple keywords usually)
+            // For now, exports are primarily for JS/TS like modules
           }
+
+          // Use new analyzers for all relevant text files if depth allows
+          todos = this.todoAnalyzer.analyzeFile(filePath, content);
+          cyclomaticComplexity = this.complexityAnalyzer.calculateCyclomaticComplexity(content);
         }
       } catch (error) {
         console.warn(`Не удалось прочитать файл ${filePath}:`, error);
@@ -320,7 +357,9 @@ class CodeAnalyzerServer {
       linesOfCode,
       functions,
       imports,
-      exports
+      exports,
+      todos, // Added
+      cyclomaticComplexity // Added
     };
   }
 
