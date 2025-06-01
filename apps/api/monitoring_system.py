@@ -124,9 +124,13 @@ class AdvancedAnalyticsLogger:
             "duration_ms": event.duration_ms,
             "error_message": event.error_message,
             "metadata": event.metadata or {},
-            "performance": asdict(event.performance_metrics) if event.performance_metrics else None
         }
         
+        if event.performance_metrics:
+            event.performance_metrics.timestamp = event.performance_metrics.timestamp.isoformat()
+
+        log_data["performance"] = asdict(event.performance_metrics) if event.performance_metrics else None
+
         self.logger.info(f"EVENT | {json.dumps(log_data, ensure_ascii=False)}")
         
         # 🎯 Обновляем статистику сессии
@@ -325,3 +329,107 @@ def get_system_health():
 def get_analytics_summary(session_id: Optional[str] = None):
     """📊 Быстрое получение аналитики"""
     return analytics_logger.get_analytics_summary(session_id)
+
+# Test function for the timestamp serialization
+def test_log_event_with_performance_metrics_timestamp_serialization():
+    """
+    Тест для проверки сериализации timestamp в performance_metrics.
+    Убеждается, что datetime объект корректно преобразуется в ISO строку.
+    """
+    print("Running test: test_log_event_with_performance_metrics_timestamp_serialization")
+    # Используем временный лог-файл для теста
+    test_logger = AdvancedAnalyticsLogger(log_file="test_analytics.log")
+
+    # --- Start of fix for logger handler ---
+    # Ensure the test logger instance writes to its own specified log file
+    # Get the underlying logger instance used by AdvancedAnalyticsLogger
+    # This is 'mcp_analytics' due to how AdvancedAnalyticsLogger is written
+    logger_instance = logging.getLogger("mcp_analytics")
+
+    # Clear any handlers configured by other instances (e.g., the global analytics_logger)
+    logger_instance.handlers.clear()
+
+    # Add a new FileHandler for the test_logger's specific log file
+    test_file_handler = logging.FileHandler(test_logger.log_file, encoding='utf-8')
+    formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    test_file_handler.setFormatter(formatter)
+    logger_instance.addHandler(test_file_handler)
+
+    # Optionally, add a console handler for test visibility if needed
+    # test_console_handler = logging.StreamHandler()
+    # test_console_handler.setFormatter(formatter)
+    # logger_instance.addHandler(test_console_handler)
+    # --- End of fix for logger handler ---
+
+    # Создаем тестовые метрики производительности
+    perf_metrics = PerformanceMetrics(
+        cpu_usage=50.0,
+        memory_usage=60.0,
+        disk_usage=70.0,
+        active_connections=10,
+        response_time_ms=100.0,
+        timestamp=datetime.now(timezone.utc) # Используем datetime объект
+    )
+
+    # Создаем тестовое событие
+    test_event = AnalysisEvent(
+        event_id=test_logger.generate_event_id(),
+        event_type=EventType.PERFORMANCE_METRIC,
+        timestamp=datetime.now(timezone.utc),
+        performance_metrics=perf_metrics
+    )
+
+    try:
+        # Логируем событие
+        test_logger.log_event(test_event)
+        # Проверяем, что последний лог содержит performance.timestamp как строку
+        # Это косвенная проверка, что json.dumps не упал и преобразование было
+        with open(test_logger.log_file, "r", encoding="utf-8") as f:
+            last_log_line = f.readlines()[-1]
+
+        log_json = json.loads(last_log_line.split("EVENT | ")[1])
+
+        assert "performance" in log_json
+        assert log_json["performance"] is not None
+        assert "timestamp" in log_json["performance"]
+        assert isinstance(log_json["performance"]["timestamp"], str)
+
+        # Дополнительно убедимся, что оригинальный объект в памяти тоже изменен (если это ожидаемое поведение)
+        # В данном случае, мы меняем объект event.performance_metrics напрямую
+        assert isinstance(test_event.performance_metrics.timestamp, str)
+
+        print("Test passed: Timestamp in performance_metrics was correctly serialized to ISO string.")
+
+    except Exception as e:
+        print(f"Test failed: {e}")
+        traceback.print_exc()
+        assert False, f"log_event raised an exception: {e}"
+    finally:
+        # Очищаем тестовый лог-файл
+        if os.path.exists(test_logger.log_file):
+            os.remove(test_logger.log_file)
+
+if __name__ == "__main__":
+    # Запускаем тест при прямом вызове скрипта
+    test_log_event_with_performance_metrics_timestamp_serialization()
+
+    # Пример использования системы (можно оставить или убрать)
+    print("\n--- Example System Usage ---")
+    logger_main = AdvancedAnalyticsLogger()
+
+    logger_main.log_event(AnalysisEvent(
+        event_id=logger_main.generate_event_id(),
+        event_type=EventType.ANALYSIS_START,
+        timestamp=datetime.now(timezone.utc),
+        project_path="/path/to/project"
+    ))
+
+    current_health = logger_main.health_check()
+    print(f"Current system health: {current_health['status']}")
+
+    summary = logger_main.get_analytics_summary()
+    print(f"Analytics summary: {summary}")
+    print("--- End Example System Usage ---")
