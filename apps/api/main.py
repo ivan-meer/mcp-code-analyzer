@@ -375,16 +375,53 @@ class CodeAnalyzer:
             project_path=project_path,
             session_id=session_id
         ):
-            # 📁 Подготовка к сканированию файлов
-            path_obj = Path(project_path).expanduser().resolve()
-
-            if not path_obj.exists():
-                # Try resolving relative to workspace root
-                workspace_path = Path(workspace_root).joinpath(project_path).resolve()
-                if workspace_path.exists():
-                    path_obj = workspace_path
+            # 📁 Интеллектуальный поиск пути к проекту
+            path_obj = None
+            
+            # 1. Проверяем как абсолютный путь
+            if Path(project_path).is_absolute() and Path(project_path).exists():
+                path_obj = Path(project_path).resolve()
+            
+            # 2. Проверяем относительно текущей директории
+            elif Path(project_path).exists():
+                path_obj = Path(project_path).expanduser().resolve()
+            
+            # 3. Проверяем относительно current working directory
+            elif Path.cwd().joinpath(project_path).exists():
+                path_obj = Path.cwd().joinpath(project_path).resolve()
+            
+            # 4. Ищем в стандартных местах для проектов
+            else:
+                # Проверяем в родительской директории API
+                api_parent = Path(__file__).parent.parent.parent  # выходим из apps/api/
+                if api_parent.joinpath(project_path).exists():
+                    path_obj = api_parent.joinpath(project_path).resolve()
+                
+                # Проверяем в D:\.AI-DATA\code_projects\ (если мы в этой структуре)
                 else:
-                    raise HTTPException(status_code=404, detail="Project path not found")
+                    workspace_root = os.getenv('PROJECT_WORKSPACE_ROOT', 'D:\.AI-DATA\code_projects')
+                    if Path(workspace_root).exists():
+                        project_in_workspace = Path(workspace_root).joinpath(project_path)
+                        if project_in_workspace.exists():
+                            path_obj = project_in_workspace.resolve()
+                
+                # Проверяем название проекта в разных вариациях
+                if project_path == "mcp-code-analyzer":
+                    # Специальная логика для нашего проекта
+                    current_file_path = Path(__file__).resolve()
+                    # Поднимаемся до корня проекта mcp-code-analyzer
+                    potential_project_root = current_file_path
+                    while potential_project_root.parent != potential_project_root:
+                        if potential_project_root.name == "mcp-code-analyzer":
+                            path_obj = potential_project_root
+                            break
+                        potential_project_root = potential_project_root.parent
+            
+            if not path_obj or not path_obj.exists():
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Project path not found: {project_path}. Checked current directory, parent directories, and common project locations."
+                )
 
             files = []
             dependencies = []
@@ -416,9 +453,9 @@ class CodeAnalyzer:
                     "progress_percentage": 0,
                     "files_processed": 0,
                     "files_total": len(file_paths),
-                    "status": "started"
-                },
-                session_id=session_id
+                    "status": "started",
+                    "session_id": session_id  # Included in metadata for compatibility
+                }
             )
 
         # 🔄 Параллельная обработка файлов с мониторингом
@@ -453,9 +490,9 @@ class CodeAnalyzer:
                         metadata={
                             "file_size": result.size,
                             "lines_of_code": result.lines_of_code,
-                            "functions_count": len(result.functions)
-                        },
-                        session_id=session_id
+                            "functions_count": len(result.functions),
+                            "session_id": session_id  # Included in metadata for compatibility
+                        }
                     )
 
                     return result
@@ -467,8 +504,10 @@ class CodeAnalyzer:
                         project_path=project_path,
                         file_path=file_path_str,
                         error_message=str(e),
-                        metadata={"error_type": "file_analysis_error"},
-                        session_id=session_id
+                        metadata={
+                            "error_type": "file_analysis_error",
+                            "session_id": session_id  # Included in metadata for compatibility
+                        }
                     )
                     logger.warning(f"⚠️ Ошибка анализа файла {file_path_str}: {str(e)}")
                     return None
@@ -500,9 +539,9 @@ class CodeAnalyzer:
                                 metadata={
                                     "progress_percentage": progress_percentage,
                                     "files_processed": processed_files,
-                                    "files_total": total_files
-                                },
-                                session_id=session_id
+                                    "files_total": total_files,
+                                    "session_id": session_id  # Included in metadata for compatibility
+                                }
                             )
 
                     except Exception as e:
@@ -583,9 +622,9 @@ class CodeAnalyzer:
                 "final_metrics": metrics,
                 "patterns_detected": patterns,
                 "total_todos": len(all_project_todos),
-                "documentation_files": len(project_docs_list)
-            },
-            session_id=session_id
+                "documentation_files": len(project_docs_list),
+                "session_id": session_id  # Included in metadata for compatibility
+            }
         )
 
         logger.info(f"🎉 Интеллектуальный анализ проекта завершён успешно!")
@@ -598,107 +637,6 @@ class CodeAnalyzer:
         logger.info(f"   🏗️ Паттернов: {len(patterns)}")
 
         return final_result
-        """Анализ всего проекта с использованием параллельной обработки для повышения скорости"""
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        path_obj = Path(project_path)
-
-        if not path_obj.exists():
-            raise HTTPException(status_code=404, detail="Project path not found")
-
-        files = []
-        dependencies = []
-        file_paths = []
-
-        # Сканируем файлы проекта и собираем список для параллельной обработки
-        for file_path in path_obj.rglob("*"):
-            if file_path.is_file() and file_path.suffix in ['.js', '.ts', '.tsx', '.jsx', '.py', '.html', '.css']:
-                # Пропускаем node_modules и другие служебные папки
-                if any(part in str(file_path) for part in ['node_modules', '.git', 'dist', 'build', '__pycache__']):
-                    continue
-                file_paths.append(str(file_path))
-
-        # Ограничиваем количество файлов для анализа, чтобы избежать перегрузки
-        max_files = 500
-        if len(file_paths) > max_files:
-            print(f"Project has {len(file_paths)} files, limiting analysis to first {max_files} files for performance.")
-            file_paths = file_paths[:max_files]
-
-        # Параллельная обработка файлов с индикатором прогресса
-        total_files = len(file_paths)
-        processed_files = 0
-        print(f"Starting analysis of {total_files} files...")
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_path = {executor.submit(CodeAnalyzer.analyze_file, path): path for path in file_paths}
-            for future in as_completed(future_to_path):
-                path = future_to_path[future]
-                try:
-                    file_info = future.result()
-                    files.append(file_info)
-                    processed_files += 1
-                    print(f"Processed {processed_files}/{total_files} files ({(processed_files/total_files)*100:.1f}%) - {path}")
-                except Exception as e:
-                    print(f"Error analyzing {path}: {e}")
-        print("Analysis complete.")
-
-        # Строим граф зависимостей, собираем все TODOs и документацию
-        all_project_todos = []
-        project_docs_list: List[DocFile] = []
-
-        for file_info in files:
-            # Dependencies
-            for import_path in file_info.imports:
-                dependencies.append({
-                    "from": file_info.path,
-                    "to": import_path,
-                    "type": "import"
-                })
-            # Aggregate TODOs
-            if file_info.todos:
-                for todo in file_info.todos:
-                    all_project_todos.append({
-                        "file_path": file_info.path,
-                        "line": todo["line"],
-                        "type": todo["type"],
-                        "content": todo["content"],
-                        "priority": todo.get("priority")
-                    })
-            # Aggregate Documentation
-            if file_info.doc_details and len(file_info.doc_details) > 0:
-                project_docs_list.append(DocFile(
-                    file_path=file_info.path,
-                    functions=file_info.doc_details
-                ))
-
-        # Вычисляем метрики
-        total_lines = sum(f.lines_of_code or 0 for f in files)
-        total_functions = sum(len(f.functions) for f in files)
-
-        metrics = {
-            "total_files": len(files),
-            "total_lines": total_lines,
-            "total_functions": total_functions,
-            "avg_lines_per_file": total_lines / len(files) if files else 0,
-            "languages": list(set(f.type for f in files if f.type != "unknown"))
-        }
-
-        # Определяем архитектурные паттерны (упрощенно)
-        patterns = []
-        if any("component" in f.path.lower() for f in files):
-            patterns.append("Component Architecture")
-        if any("api" in f.path.lower() or "service" in f.path.lower() for f in files):
-            patterns.append("Service Layer")
-        if any("test" in f.path.lower() for f in files):
-            patterns.append("Test Coverage")
-
-        return ProjectAnalysisResult(
-            project_path=project_path,
-            files=files,
-            dependencies=dependencies,
-            metrics=metrics,
-            architecture_patterns=patterns,
-            all_todos=all_project_todos,
-            project_documentation=project_docs_list
-        )
 
 # API Endpoints
 @app.get("/")
@@ -820,7 +758,7 @@ async def analyze_project(request: ProjectAnalysisRequest):
                     "include_tests": request.include_tests,
                     "analysis_depth": request.analysis_depth
                 },
-                "session_id": session_id
+                "session_id": session_id  # Included in metadata for compatibility
             }
         )
 
@@ -934,9 +872,6 @@ async def comprehensive_analysis(request: ComprehensiveAnalysisRequest):
         # Check if file exists
         if not Path(request.file_path).exists():
             raise HTTPException(status_code=404, detail="File not found")
-    except Exception as e:
-        logger.error(f"Error checking file existence: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
         
         # Анализируем файл
         file_info = CodeAnalyzer.analyze_file(request.file_path)
@@ -947,7 +882,14 @@ async def comprehensive_analysis(request: ComprehensiveAnalysisRequest):
         
         # Анализируем проект для контекста
         try:
-            project_analysis = CodeAnalyzer.analyze_project(request.project_path)
+            # Используем монitorированную версию анализа проекта
+            session_id = str(uuid.uuid4())
+            project_analysis = await CodeAnalyzer.analyze_project_monitored(
+                request.project_path, 
+                session_id, 
+                include_tests=True, 
+                analysis_depth="basic"
+            )
             project_context = {
                 "total_files": project_analysis.metrics["total_files"],
                 "total_lines": project_analysis.metrics["total_lines"],
@@ -1041,6 +983,51 @@ async def get_ai_status():
         "usage_stats": usage_stats,
         "total_requests": sum(stats.get("request_count", 0) for stats in usage_stats.values()),
         "total_tokens": sum(stats.get("total_tokens_used", 0) for stats in usage_stats.values())
+    }
+
+@app.get("/api/projects/discover")
+async def discover_projects():
+    """
+    🔍 Автоматическое обнаружение проектов в стандартных местах
+    Помогает пользователям найти доступные проекты для анализа
+    """
+    discovered_projects = []
+    
+    # Места для поиска проектов
+    search_paths = [
+        Path.cwd(),  # Текущая директория
+        Path(__file__).parent.parent.parent,  # Родительская директория API
+        Path(os.getenv('PROJECT_WORKSPACE_ROOT', 'D:\.AI-DATA\code_projects')),  # Workspace
+    ]
+    
+    for search_path in search_paths:
+        if search_path.exists() and search_path.is_dir():
+            try:
+                for item in search_path.iterdir():
+                    if item.is_dir() and not item.name.startswith('.'):
+                        # Проверяем, похож ли этот каталог на проект
+                        project_indicators = ['package.json', 'requirements.txt', 'pyproject.toml', '.git', 'README.md']
+                        if any((item / indicator).exists() for indicator in project_indicators):
+                            discovered_projects.append({
+                                "name": item.name,
+                                "path": str(item),
+                                "relative_path": item.name if search_path == Path.cwd() else str(item.relative_to(search_path.parent)),
+                                "location": str(search_path),
+                                "type": "auto-discovered"
+                            })
+            except (PermissionError, OSError):
+                continue
+    
+    # Удаляем дубликаты по имени
+    unique_projects = {}
+    for project in discovered_projects:
+        if project["name"] not in unique_projects:
+            unique_projects[project["name"]] = project
+    
+    return {
+        "discovered_projects": list(unique_projects.values()),
+        "search_paths": [str(p) for p in search_paths if p.exists()],
+        "total_found": len(unique_projects)
     }
 
 @app.get("/api/projects")
@@ -1360,11 +1347,6 @@ async def clear_monitoring_logs():
         logger.error(f"❌ Ошибка при очистке логов мониторинга: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка очистки логов: {str(e)}")
 
-@app.get("/api/health")
-async def health_check():
-    """Проверка здоровья API"""
-    return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
-
 # Инициализация при запуске
 @app.on_event("startup")
 async def startup_event():
@@ -1380,6 +1362,7 @@ async def startup_event():
             logger.info(f"🤖 AI сервисы инициализированы: {list(ai_manager.services.keys())}")
         else:
             logger.warning("⚠️ AI сервисы не настроены. Установите OPENAI_API_KEY или ANTHROPIC_API_KEY в переменных окружения.")
+            logger.warning("ℹ️ Создайте файл '.env' на основе '.env.example' и заполните необходимые ключи API для активации AI функций.")
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации AI сервисов: {str(e)}")
         ai_manager = None
