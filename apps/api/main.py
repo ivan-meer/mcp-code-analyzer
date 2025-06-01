@@ -28,15 +28,32 @@ from ai_services import (
     AIServiceError
 )
 
-# 🔍 Импорт нашей интеллектуальной системы мониторинга
-from monitoring_system import (
-    analytics_logger,
-    track_analysis_operation,
-    log_analysis_event,
-    get_system_health,
-    get_analytics_summary,
-    EventType
-)
+# 🔍 Импорт оптимизированной системы мониторинга
+# FEATURE FLAG: Постепенная миграция на новую систему мониторинга
+USE_OPTIMIZED_MONITORING = os.getenv('USE_OPTIMIZED_MONITORING', 'false').lower() == 'true'
+
+if USE_OPTIMIZED_MONITORING:
+    # Новая оптимизированная система
+    from infrastructure.monitoring import (
+        get_monitoring_system,
+        track_analysis_operation,
+        log_analysis_event,
+        get_system_health,
+        get_analytics_summary,
+        EventType
+    )
+    print("✅ Используется оптимизированная система мониторинга")
+else:
+    # Старая система (для обратной совместимости)
+    from monitoring_system import (
+        analytics_logger,
+        track_analysis_operation,
+        log_analysis_event,
+        get_system_health,
+        get_analytics_summary,
+        EventType
+    )
+    print("🔄 Используется классическая система мониторинга")
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -359,10 +376,15 @@ class CodeAnalyzer:
             session_id=session_id
         ):
             # 📁 Подготовка к сканированию файлов
-            path_obj = Path(project_path)
+            path_obj = Path(project_path).expanduser().resolve()
 
             if not path_obj.exists():
-                raise HTTPException(status_code=404, detail="Project path not found")
+                # Try resolving relative to workspace root
+                workspace_path = Path(workspace_root).joinpath(project_path).resolve()
+                if workspace_path.exists():
+                    path_obj = workspace_path
+                else:
+                    raise HTTPException(status_code=404, detail="Project path not found")
 
             files = []
             dependencies = []
