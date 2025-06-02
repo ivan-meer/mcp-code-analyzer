@@ -1,0 +1,2258 @@
+    </style>
+</head>
+<body>
+    <!-- Command Center Header -->
+    <header class="header">
+        <div class="header-content glass-strong">
+            <div class="header-left">
+                <div class="project-badge">
+                    <div class="project-icon">
+                        <i class="fas fa-code-branch"></i>
+                    </div>
+                    <div class="project-info">
+                        <h1>Результаты анализа</h1>
+                        <div class="project-path">
+                            <div class="breadcrumb">
+                                <i class="fas fa-folder"></i>
+                                <span>mcp-code-analyzer</span>
+                                <span class="breadcrumb-separator">•</span>
+                                <span>51 файл</span>
+                                <span class="breadcrumb-separator">•</span>
+                                <span>40,705 строк</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn interactive focusable" onclick="shareAnalysis()">
+                    <i class="fas fa-share-alt"></i>
+                    Поделиться
+                </button>
+                <button class="action-btn interactive focusable" onclick="exportData()">
+                    <i class="fas fa-download"></i>
+                    Экспорт
+                </button>
+                <button class="action-btn primary interactive focusable" onclick="refreshAnalysis()">
+                    <i class="fas fa-sync-alt"></i>
+                    Обновить
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Project Overview Panel -->
+        <aside class="overview-panel">
+            <!-- Project Metrics -->
+            <section class="overview-card glass">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        Обзор проекта
+                    </div>
+                    <div class="card-badge">Live</div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card interactive" style="--delay: 0s;">
+                        <div class="metric-value">51</div>
+                        <div class="metric-label">Файлов</div>
+                    </div>
+                    <div class="metric-card interactive" style="--delay: 0.1s;">
+                        <div class="metric-value">40.7K</div>
+                        <div class="metric-label">Строк кода</div>
+                    </div>
+                    <div class="metric-card interactive" style="--delay: 0.2s;">
+                        <div class="metric-value">1,629</div>
+                        <div class="metric-label">Функций</div>
+                    </div>
+                    <div class="metric-card interactive" style="--delay: 0.3s;">
+                        <div class="metric-value">119</div>
+                        <div class="metric-label">Связей</div>
+                    </div>
+                </div>
+
+                <div class="tech-stack">
+                    <span class="tech-badge interactive">TypeScript</span>
+                    <span class="tech-badge interactive">React</span>
+                    <span class="tech-badge interactive">Next.js</span>
+                    <span class="tech-badge interactive">Python</span>
+                    <span class="tech-badge interactive">FastAPI</span>
+                    <span class="tech-badge interactive">D3.js</span>
+                    <span class="tech-badge interactive">Tailwind</span>
+                </div>
+            </section>
+
+            <!-- Quick Navigation -->
+            <section class="overview-card glass">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-compass"></i>
+                        </div>
+                        Быстрая навигация
+                    </div>
+                </div>
+                
+                <div class="quick-nav">
+                    <div class="nav-item active interactive focusable" onclick="switchView('graph')">
+                        <div class="nav-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <span>Граф зависимостей</span>
+                        <span class="nav-count">119</span>
+                    </div>
+                    <div class="nav-item interactive focusable" onclick="switchView('comments')">
+                        <div class="nav-icon">
+                            <i class="fas fa-comment-alt"></i>
+                        </div>
+                        <span>TODO & Комментарии</span>
+                        <span class="nav-count">47</span>
+                    </div>
+                    <div class="nav-item interactive focusable" onclick="switchView('docs')">
+                        <div class="nav-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <span>Документация</span>
+                        <span class="nav-count">23</span>
+                    </div>
+                    <div class="nav-item interactive focusable" onclick="switchView('duplicates')">
+                        <div class="nav-icon">
+                            <i class="fas fa-copy"></i>
+                        </div>
+                        <span>Дубликаты</span>
+                        <span class="nav-count">8</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Content Area -->
+        <section class="content-area">
+            <!-- View Tabs -->
+            <div class="content-header">
+                <div class="view-tabs">
+                    <div class="view-tab active" onclick="switchView('graph')">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Граф зависимостей</span>
+                        <span class="tab-badge">119</span>
+                    </div>
+                    <div class="view-tab" onclick="switchView('comments')">
+                        <i class="fas fa-comment-alt"></i>
+                        <span>Комментарии</span>
+                        <span class="tab-badge">47</span>
+                    </div>
+                    <div class="view-tab" onclick="switchView('docs')">
+                        <i class="fas fa-book-open"></i>
+                        <span>Документация</span>
+                        <span class="tab-badge">23</span>
+                    </div>
+                    <div class="view-tab" onclick="switchView('duplicates')">
+                        <i class="fas fa-copy"></i>
+                        <span>Дубликаты</span>
+                        <span class="tab-badge">8</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Pane -->
+            <div class="content-pane glass">
+                <!-- Dependency Graph View -->
+                <div class="pane-content active" id="graph-view">
+                    <div class="graph-container">
+                        <div class="graph-controls">
+                            <div class="control-panel">
+                                <div class="control-title">
+                                    <i class="fas fa-filter"></i>
+                                    Фильтры файлов
+                                </div>
+                                <div class="filter-grid">
+                                    <button class="filter-chip active" data-filter="all">Все</button>
+                                    <button class="filter-chip" data-filter="ts">TypeScript</button>
+                                    <button class="filter-chip" data-filter="react">React</button>
+                                    <button class="filter-chip" data-filter="py">Python</button>
+                                    <button class="filter-chip" data-filter="config">Config</button>
+                                </div>
+                            </div>
+                            
+                            <div class="control-panel">
+                                <div class="control-title">
+                                    <i class="fas fa-link"></i>
+                                    Типы связей
+                                </div>
+                                <div class="filter-grid">
+                                    <button class="filter-chip active" data-connection="imports">Импорты</button>
+                                    <button class="filter-chip" data-connection="exports">Экспорты</button>
+                                    <button class="filter-chip" data-connection="deps">Зависимости</button>
+                                    <button class="filter-chip" data-connection="api">API вызовы</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <svg class="graph-svg" id="dependency-graph"></svg>
+                    </div>
+                </div>
+
+                <!-- Comments View -->
+                <div class="pane-content" id="comments-view">
+                    <div class="content-list">
+                        <div class="list-header">
+                            <h3>TODO, FIXME и HACK комментарии</h3>
+                            <div class="list-filters">
+                                <button class="filter-btn active">Все</button>
+                                <button class="filter-btn">TODO</button>
+                                <button class="filter-btn">FIXME</button>
+                                <button class="filter-btn">HACK</button>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type todo">
+                                    <i class="fas fa-check-circle"></i>
+                                    TODO
+                                </div>
+                                <div class="priority-badge high">Высокий</div>
+                            </div>
+                            <div class="comment-text">
+                                // TODO: Implement AI-powered code suggestions
+                                // Need to integrate OpenAI API for smart recommendations
+                                // This will enhance the analysis results with contextual insights
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    analysis-results.tsx
+                                    <span class="comment-line">:145</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-clock"></i>
+                                    2 дня назад
+                                </div>
+                                <div>
+                                    <i class="fas fa-user"></i>
+                                    Developer
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type fixme">
+                                    <i class="fas fa-bug"></i>
+                                    FIXME
+                                </div>
+                                <div class="priority-badge medium">Средний</div>
+                            </div>
+                            <div class="comment-text">
+                                // FIXME: Memory leak in dependency graph rendering
+                                // D3.js nodes are not properly cleaned up on re-render
+                                // causing performance degradation over time
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    dependency-graph.tsx
+                                    <span class="comment-line">:89</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-clock"></i>
+                                    5 дней назад
+                                </div>
+                                <div>
+                                    <i class="fas fa-user"></i>
+                                    Frontend Team
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type hack">
+                                    <i class="fas fa-magic"></i>
+                                    HACK
+                                </div>
+                                <div class="priority-badge low">Низкий</div>
+                            </div>
+                            <div class="comment-text">
+                                // HACK: Temporary workaround for MCP protocol limitations
+                                // Remove when official batch processing is available
+                                // This bypasses the single-request limitation
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    mcp-client.ts
+                                    <span class="comment-line">:234</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-clock"></i>
+                                    1 неделю назад
+                                </div>
+                                <div>
+                                    <i class="fas fa-user"></i>
+                                    Backend Team
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation View -->
+                <div class="pane-content" id="docs-view">
+                    <div class="content-list">
+                        <div class="list-header">
+                            <h3>Извлеченная документация</h3>
+                            <div class="list-filters">
+                                <button class="filter-btn active">Все</button>
+                                <button class="filter-btn">JSDoc</button>
+                                <button class="filter-btn">Docstring</button>
+                                <button class="filter-btn">Markdown</button>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type doc">
+                                    <i class="fas fa-book"></i>
+                                    JSDoc
+                                </div>
+                            </div>
+                            <div class="comment-text">
+                                /**
+                                 * Renders interactive dependency graph using D3.js
+                                 * @param {ProjectData} data - Analyzed project structure
+                                 * @param {GraphOptions} options - Visualization preferences  
+                                 * @returns {ReactElement} Interactive graph component
+                                 * @example
+                                 * &lt;DependencyGraph data={analysisData} options={{zoom: true}} /&gt;
+                                 */
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    DependencyGraph.tsx
+                                    <span class="comment-line">:15</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-function"></i>
+                                    DependencyGraph
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type doc">
+                                    <i class="fab fa-python"></i>
+                                    Docstring
+                                </div>
+                            </div>
+                            <div class="comment-text">
+                                """
+                                AI-powered code analysis service for intelligent insights
+                                
+                                Provides comprehensive analysis of code structure, dependencies,
+                                and potential improvements using machine learning models.
+                                
+                                Args:
+                                    project_path (str): Path to the project directory
+                                    analysis_depth (str): Level of analysis ('basic'|'deep')
+                                    
+                                Returns:
+                                    AnalysisResult: Comprehensive project insights and metrics
+                                
+                                Raises:
+                                    FileNotFoundError: If project path doesn't exist
+                                    AnalysisError: If analysis fails due to invalid code
+                                """
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fab fa-python"></i>
+                                    ai_analyzer.py
+                                    <span class="comment-line">:45</span>
+                                </div>
+                                <div>
+                                    <i class="fas fa-function"></i>
+                                    analyze_project_comprehensive
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Duplicates View -->
+                <div class="pane-content" id="duplicates-view">
+                    <div class="content-list">
+                        <div class="list-header">
+                            <h3>Дублирующиеся файлы</h3>
+                            <div class="list-filters">
+                                <button class="filter-btn active">Все</button>
+                                <button class="filter-btn">Полные</button>
+                                <button class="filter-btn">Частичные</button>
+                                <button class="filter-btn">Подозрительные</button>
+                            </div>
+                        </div>
+
+                        <div class="comment-item interactive">
+                            <div class="comment-header">
+                                <div class="comment-type" style="color: var(--accent-warning);">
+                                    <i class="fas fa-copy"></i>
+                                    Полный дубликат
+                                </div>
+                                <div class="priority-badge medium">97% схожесть</div>
+                            </div>
+                            <div class="comment-text">
+                                Найдены идентичные файлы с одинаковой функциональностью.
+                                Рекомендуется объединить в общий модуль для улучшения поддерживаемости.
+                            </div>
+                            <div class="comment-meta">
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    utils/format.ts
+                                </div>
+                                <div class="comment-file">
+                                    <i class="fas fa-file-code"></i>
+                                    helpers/formatting.ts
+                                </div>
+                                <div>
+                                    <i class="fas fa-weight-hanging"></i>
+                                    2.3 KB каждый
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Insights Panel -->
+        <aside class="insights-panel">
+            <!-- AI Insights -->
+            <section class="insight-card glass-accent">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        AI Инсайты
+                    </div>
+                    <div class="card-badge">4 новых</div>
+                </div>
+                
+                <div class="insight-list">
+                    <div class="insight-item interactive">
+                        <div class="insight-type">Архитектурный паттерн</div>
+                        <div class="insight-text">
+                            Обнаружена модульная архитектура с четким разделением слоев. 
+                            Компоненты хорошо изолированы и следуют принципам SOLID.
+                        </div>
+                    </div>
+                    
+                    <div class="insight-item interactive">
+                        <div class="insight-type">Рекомендация по рефакторингу</div>
+                        <div class="insight-text">
+                            Рассмотрите выделение AI сервисов в отдельный пакет для 
+                            улучшения переиспользуемости и тестируемости кода.
+                        </div>
+                    </div>
+                    
+                    <div class="insight-item interactive">
+                        <div class="insight-type">Качество кода</div>
+                        <div class="insight-text">
+                            Высокий уровень типизации TypeScript (94% покрытие). 
+                            Код легко читается и имеет хорошую документацию.
+                        </div>
+                    </div>
+                    
+                    <div class="insight-item interactive">
+                        <div class="insight-type">Потенциальная проблема</div>
+                        <div class="insight-text">
+                            Обнаружены циклические зависимости в модулях анализа. 
+                            Это может привести к проблемам с производительностью.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quality Metrics -->
+            <section class="insight-card glass">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        Метрики качества
+                    </div>
+                </div>
+                
+                <div class="quality-metrics">
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Качество кода</div>
+                                <div class="metric-description">Общая оценка качества</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">94%</div>
+                            <div class="score-trend up">+2%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Типизация</div>
+                                <div class="metric-description">TypeScript покрытие</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">97%</div>
+                            <div class="score-trend up">+5%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-puzzle-piece"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Модульность</div>
+                                <div class="metric-description">Связность компонентов</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">89%</div>
+                            <div class="score-trend up">+1%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-bug"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Потенциальные баги</div>
+                                <div class="metric-description">Обнаруженные проблемы</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">3</div>
+                            <div class="score-trend down">-2</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Техдолг</div>
+                                <div class="metric-description">Время на рефакторинг</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">2.5д</div>
+                            <div class="score-trend stable">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item interactive">
+                        <div class="metric-info">
+                            <div class="metric-icon">
+                                <i class="fas fa-rocket"></i>
+                            </div>
+                            <div class="metric-details">
+                                <div class="metric-name">Производительность</div>
+                                <div class="metric-description">Скорость анализа</div>
+                            </div>
+                        </div>
+                        <div class="metric-score">
+                            <div class="score-value">A+</div>
+                            <div class="score-trend up">↑</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // Global state
+        let currentView = 'graph';
+        let dependencyGraph = null;
+        let activeFilters = {
+            fileTypes: ['all'],
+            connectionTypes: ['imports']
+        };
+
+        // View switching with smooth transitions
+        function switchView(viewName) {
+            // Update active states
+            document.querySelectorAll('.view-tab, .nav-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.pane-content').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            
+            // Set new active states
+            document.querySelectorAll(`[onclick="switchView('${viewName}')"]`).forEach(el => {
+                el.classList.add('active');
+            });
+            
+            document.getElementById(viewName + '-view').classList.add('active');
+            
+            currentView = viewName;
+            
+            // Initialize view-specific features
+            if (viewName === 'graph' && !dependencyGraph) {
+                setTimeout(() => initializeDependencyGraph(), 200);
+            }
+            
+            // Log view change for analytics
+            console.log(`Switched to ${viewName} view`);
+        }
+
+        // Advanced Dependency Graph with D3.js
+        function initializeDependencyGraph() {
+            const container = document.getElementById('dependency-graph');
+            const rect = container.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Clear previous content
+            d3.select(container).selectAll('*').remove();
+            
+            const svg = d3.select(container)
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Sample data - enhanced with more realistic project structure
+            const nodes = [
+                // Core App Files
+                {id: 'main.tsx', type: 'tsx', group: 1, size: 25, category: 'core'},
+                {id: 'App.tsx', type: 'tsx', group: 1, size: 20, category: 'core'},
+                {id: 'layout.tsx', type: 'tsx', group: 1, size: 15, category: 'core'},
+                
+                // Analysis Components
+                {id: 'AnalysisResults.tsx', type: 'tsx', group: 2, size: 30, category: 'analysis'},
+                {id: 'dependency-graph.tsx', type: 'tsx', group: 2, size: 25, category: 'analysis'},
+                {id: 'TodosSection.tsx', type: 'tsx', group: 2, size: 20, category: 'analysis'},
+                
+                // Backend Services
+                {id: 'main.py', type: 'py', group: 3, size: 35, category: 'backend'},
+                {id: 'ai_manager.py', type: 'py', group: 3, size: 28, category: 'backend'},
+                {id: 'code_analyzer.py', type: 'py', group: 3, size: 22, category: 'backend'},
+                
+                // MCP Servers
+                {id: 'mcp-server.ts', type: 'ts', group: 4, size: 18, category: 'mcp'},
+                {id: 'file-analyzer.ts', type: 'ts', group: 4, size: 16, category: 'mcp'},
+                
+                // Utilities & Config
+                {id: 'utils.ts', type: 'ts', group: 5, size: 12, category: 'utils'},
+                {id: 'package.json', type: 'json', group: 5, size: 8, category: 'config'},
+                {id: 'tsconfig.json', type: 'json', group: 5, size: 6, category: 'config'},
+                
+                // Shared Components
+                {id: 'Button.tsx', type: 'tsx', group: 6, size: 10, category: 'ui'},
+                {id: 'Card.tsx', type: 'tsx', group: 6, size: 8, category: 'ui'},
+            ];
+            
+            const links = [
+                // Core app structure
+                {source: 'main.tsx', target: 'App.tsx', value: 3, type: 'import'},
+                {source: 'App.tsx', target: 'layout.tsx', value: 2, type: 'import'},
+                {source: 'App.tsx', target: 'AnalysisResults.tsx', value: 3, type: 'import'},
+                
+                // Analysis components
+                {source: 'AnalysisResults.tsx', target: 'dependency-graph.tsx', value: 2, type: 'import'},
+                {source: 'AnalysisResults.tsx', target: 'TodosSection.tsx', value: 2, type: 'import'},
+                {source: 'AnalysisResults.tsx', target: 'main.py', value: 3, type: 'api'},
+                
+                // Backend connections
+                {source: 'main.py', target: 'ai_manager.py', value: 3, type: 'import'},
+                {source: 'main.py', target: 'code_analyzer.py', value: 2, type: 'import'},
+                {source: 'ai_manager.py', target: 'mcp-server.ts', value: 2, type: 'mcp'},
+                
+                // MCP connections
+                {source: 'mcp-server.ts', target: 'file-analyzer.ts', value: 2, type: 'import'},
+                
+                // Utility connections
+                {source: 'dependency-graph.tsx', target: 'utils.ts', value: 1, type: 'import'},
+                {source: 'AnalysisResults.tsx', target: 'Button.tsx', value: 1, type: 'import'},
+                {source: 'AnalysisResults.tsx', target: 'Card.tsx', value: 1, type: 'import'},
+                
+                // Config dependencies
+                {source: 'main.tsx', target: 'package.json', value: 1, type: 'config'},
+                {source: 'utils.ts', target: 'tsconfig.json', value: 1, type: 'config'},
+            ];
+            
+            // Enhanced color scheme
+            const colorScale = d3.scaleOrdinal()
+                .domain([1, 2, 3, 4, 5, 6])
+                .range(['#5865F2', '#FF6B6B', '#51CF66', '#4DABF7', '#FFD43B', '#9775FA']);
+            
+            // Link color based on type
+            const linkColorScale = d3.scaleOrdinal()
+                .domain(['import', 'api', 'mcp', 'config'])
+                .range(['#A3A9F5', '#FF8E8E', '#7C84F3', '#FFE066']);
+            
+            // Create container group for zoom/pan
+            const container_g = svg.append('g');
+            
+            // Add zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    container_g.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Create force simulation
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(d => 80 + d.value * 20))
+                .force('charge', d3.forceManyBody().strength(-500))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.size) * 2 + 10));
+            
+            // Create link elements
+            const link = container_g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', d => linkColorScale(d.type))
+                .attr('stroke-width', d => Math.sqrt(d.value) * 2)
+                .attr('stroke-opacity', 0.6)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke-opacity', 1);
+                    showTooltip(event, `${d.source.id} → ${d.target.id}<br>Тип: ${d.type}<br>Сила: ${d.value}`);
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).attr('stroke-opacity', 0.6);
+                    hideTooltip();
+                });
+            
+            // Create node elements
+            const node = container_g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('circle')
+                .data(nodes)
+                .enter().append('circle')
+                .attr('r', d => Math.sqrt(d.size) * 2)
+                .attr('fill', d => colorScale(d.group))
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2)
+                .style('cursor', 'pointer')
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded))
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke-width', 4);
+                    showTooltip(event, `<strong>${d.id}</strong><br>Тип: ${d.type}<br>Размер: ${d.size} строк<br>Категория: ${d.category}`);
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).attr('stroke-width', 2);
+                    hideTooltip();
+                })
+                .on('click', function(event, d) {
+                    console.log('Opening file:', d.id);
+                    // In real implementation, this would open the file in editor
+                });
+            
+            // Create labels
+            const label = container_g.append('g')
+                .attr('class', 'labels')
+                .selectAll('text')
+                .data(nodes)
+                .enter().append('text')
+                .text(d => d.id)
+                .attr('font-size', '10px')
+                .attr('fill', '#fff')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '.35em')
+                .style('pointer-events', 'none')
+                .style('text-shadow', '0 1px 3px rgba(0,0,0,0.8)');
+            
+            // Update positions on simulation tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            // Drag functions
+            function dragStarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragEnded(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            dependencyGraph = { simulation, svg, container_g, nodes, links };
+            
+            // Initialize with current filters
+            applyFilters();
+        }
+
+        // Apply filters to the graph
+        function applyFilters() {
+            if (!dependencyGraph) return;
+            
+            const { nodes, links, container_g } = dependencyGraph;
+            
+            // Filter nodes based on selected file types
+            const visibleNodes = nodes.filter(node => {
+                if (activeFilters.fileTypes.includes('all')) return true;
+                return activeFilters.fileTypes.some(filter => {
+                    switch(filter) {
+                        case 'ts': return node.type === 'ts' || node.type === 'tsx';
+                        case 'react': return node.type === 'tsx';
+                        case 'py': return node.type === 'py';
+                        case 'config': return node.type === 'json';
+                        default: return true;
+                    }
+                });
+            });
+            
+            // Filter links based on connection types and visible nodes
+            const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+            const visibleLinks = links.filter(link => {
+                const isNodeVisible = visibleNodeIds.has(link.source.id || link.source) && 
+                                     visibleNodeIds.has(link.target.id || link.target);
+                const isTypeVisible = activeFilters.connectionTypes.includes(link.type);
+                return isNodeVisible && isTypeVisible;
+            });
+            
+            // Update visibility
+            container_g.selectAll('.nodes circle')
+                .style('opacity', d => visibleNodes.includes(d) ? 1 : 0.1);
+            
+            container_g.selectAll('.labels text')
+                .style('opacity', d => visibleNodes.includes(d) ? 1 : 0.1);
+            
+            container_g.selectAll('.links line')
+                .style('opacity', d => visibleLinks.includes(d) ? 0.6 : 0.1);
+        }
+
+        // Filter chip handlers
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const filterType = this.getAttribute('data-filter');
+                const connectionType = this.getAttribute('data-connection');
+                
+                if (filterType) {
+                    // Handle file type filters
+                    const parent = this.parentElement;
+                    if (filterType === 'all') {
+                        parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                        this.classList.add('active');
+                        activeFilters.fileTypes = ['all'];
+                    } else {
+                        parent.querySelector('[data-filter="all"]').classList.remove('active');
+                        this.classList.toggle('active');
+                        
+                        const activeChips = parent.querySelectorAll('.filter-chip.active');
+                        if (activeChips.length === 0) {
+                            parent.querySelector('[data-filter="all"]').classList.add('active');
+                            activeFilters.fileTypes = ['all'];
+                        } else {
+                            activeFilters.fileTypes = Array.from(activeChips).map(c => c.getAttribute('data-filter'));
+                        }
+                    }
+                } else if (connectionType) {
+                    // Handle connection type filters
+                    const parent = this.parentElement;
+                    parent.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    activeFilters.connectionTypes = [connectionType];
+                }
+                
+                applyFilters();
+            });
+        });
+
+        // Tooltip functions
+        function showTooltip(event, content) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = content;
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        // Header action handlers
+        function shareAnalysis() {
+            // Copy analysis URL to clipboard
+            navigator.clipboard.writeText(window.location.href);
+            showNotification('Ссылка скопирована в буфер обмена', 'success');
+        }
+
+        function exportData() {
+            // Export analysis data
+            const data = {
+                project: 'mcp-code-analyzer',
+                timestamp: new Date().toISOString(),
+                metrics: {
+                    files: 51,
+                    lines: 40705,
+                    functions: 1629,
+                    dependencies: 119
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'analysis-results.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Данные экспортированы', 'success');
+        }
+
+        function refreshAnalysis() {
+            // Refresh analysis
+            showNotification('Обновление анализа...', 'info');
+            
+            // Simulate refresh
+            setTimeout(() => {
+                showNotification('Анализ обновлен', 'success');
+                if (dependencyGraph) {
+                    dependencyGraph.simulation.alpha(1).restart();
+                }
+            }, 2000);
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                transform: translateX(400px);
+                transition: transform 0.3s ease;
+                ${type === 'success' ? 'background: #51CF66;' : 
+                  type === 'error' ? 'background: #FF6B6B;' : 
+                  'background: #4DABF7;'}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize default view
+            setTimeout(() => initializeDependencyGraph(), 500);
+            
+            // Add smooth scroll behavior
+            document.documentElement.style.scrollBehavior = 'smooth';
+            
+            // Initialize interactive elements
+            initializeInteractions();
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.altKey) {
+                    switch(e.key) {
+                        case '1':
+                            e.preventDefault();
+                            switchView('graph');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            switchView('comments');
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            switchView('docs');
+                            break;
+                        case '4':
+                            e.preventDefault();
+                            switchView('duplicates');
+                            break;
+                    }
+                }
+            });
+        });
+
+        function initializeInteractions() {
+            // Add hover effects to interactive elements
+            document.querySelectorAll('.interactive').forEach(element => {
+                element.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                element.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+            
+            // Add click animations
+            document.querySelectorAll('.interactive').forEach(element => {
+                element.addEventListener('mousedown', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+                
+                element.addEventListener('mouseup', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+            });
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (dependencyGraph && currentView === 'graph') {
+                setTimeout(() => initializeDependencyGraph(), 100);
+            }
+        });
+
+        // Performance monitoring
+        function trackPerformance(action) {
+            const start = performance.now();
+            return function() {
+                const end = performance.now();
+                console.log(`${action} took ${end - start} milliseconds`);
+            };
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Code Analyzer - Award-Winning Results Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        :root {
+            /* Award-winning Design System */
+            --primary-900: #0F0F23;
+            --primary-800: #1A1B3A;
+            --primary-700: #2D2E54;
+            --primary-600: #3D4475;
+            --primary-500: #5865F2;
+            --primary-400: #7C84F3;
+            --primary-300: #A3A9F5;
+            --primary-200: #C7CCF7;
+            --primary-100: #E8E9FB;
+            
+            --accent-danger: #FF6B6B;
+            --accent-warning: #FFD93D;
+            --accent-success: #6BCF7F;
+            --accent-info: #4DABF7;
+            --accent-purple: #9775FA;
+            
+            --neutral-900: #0C0C0C;
+            --neutral-800: #1A1A1A;
+            --neutral-700: #2D2D2D;
+            --neutral-600: #404040;
+            --neutral-500: #737373;
+            --neutral-400: #A3A3A3;
+            --neutral-300: #D4D4D4;
+            --neutral-200: #E5E5E5;
+            --neutral-100: #F5F5F5;
+            --neutral-50: #FAFAFA;
+            
+            /* Spacing & Layout */
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-5: 1.25rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-10: 2.5rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+            
+            /* Radius Scale */
+            --radius-xs: 0.25rem;
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+            --radius-3xl: 2rem;
+            
+            /* Shadows & Effects */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-glow: 0 0 40px rgba(88, 101, 242, 0.25);
+            --shadow-glow-accent: 0 0 30px rgba(255, 107, 107, 0.2);
+            
+            /* Typography */
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+            
+            /* Z-index Scale */
+            --z-dropdown: 1000;
+            --z-sticky: 1020;
+            --z-fixed: 1030;
+            --z-modal: 1040;
+            --z-tooltip: 1070;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--primary-900) 0%, var(--primary-800) 30%, var(--neutral-900) 100%);
+            color: var(--neutral-100);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            font-feature-settings: 'kern' 1, 'liga' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Glass Morphism System */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .glass-strong {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .glass-accent {
+            background: rgba(88, 101, 242, 0.1);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Header - Command Center */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+            margin: var(--space-4) var(--space-6) 0;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4) var(--space-6);
+            border-radius: var(--radius-2xl);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-400), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-5);
+        }
+
+        .project-badge {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .project-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-500), var(--accent-purple));
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: var(--shadow-glow);
+            position: relative;
+        }
+
+        .project-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: var(--radius-xl);
+            background: linear-gradient(135deg, var(--primary-400), var(--accent-purple));
+            z-index: -1;
+            filter: blur(8px);
+            opacity: 0.5;
+        }
+
+        .project-info h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--neutral-100), var(--primary-300));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: var(--space-1);
+        }
+
+        .project-path {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--neutral-400);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .breadcrumb-separator {
+            color: var(--neutral-500);
+            font-size: 0.75rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--space-3);
+            align-items: center;
+        }
+
+        .action-btn {
+            padding: var(--space-3) var(--space-4);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-lg);
+            color: var(--neutral-200);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border-color: var(--primary-400);
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, var(--primary-400), var(--primary-500));
+            box-shadow: var(--shadow-glow), var(--shadow-lg);
+        }
+
+        /* Main Layout - Advanced Grid */
+        .main-container {
+            margin: var(--space-6);
+            display: grid;
+            grid-template-columns: 380px 1fr 400px;
+            grid-template-areas: "overview content insights";
+            gap: var(--space-6);
+            min-height: calc(100vh - 140px);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        /* Project Overview - Left Panel */
+        .overview-panel {
+            grid-area: overview;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+
+        .overview-card {
+            border-radius: var(--radius-2xl);
+            padding: var(--space-6);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-500), var(--accent-purple), var(--accent-info));
+            opacity: 0.8;
+        }
+
+        .overview-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl), var(--shadow-glow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-5);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--neutral-100);
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: white;
+        }
+
+        .card-badge {
+            background: var(--accent-danger);
+            color: white;
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-xl);
+            font-size: 0.75rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-xl);
+            padding: var(--space-5);
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-400), transparent);
+            animation: shimmer 2s infinite;
+            animation-delay: var(--delay, 0s);
+        }
+
+        .metric-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-300), var(--accent-info));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: var(--space-1);
+            line-height: 1;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--neutral-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+            margin-bottom: var(--space-6);
+        }
+
+        .tech-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-xl);
+            padding: var(--space-2) var(--space-4);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--neutral-200);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tech-badge:hover {
+            background: var(--primary-500);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Quick Navigation */
+        .quick-nav {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(var(--space-2));
+            border-color: var(--primary-400);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border-color: var(--primary-400);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
+
+        .nav-count {
+            margin-left: auto;
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* Content Area - Dual Pane Design */
+        .content-area {
+            grid-area: content;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+
+        .content-header {
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            gap: var(--space-4);
+        }
+
+        .view-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-2xl);
+            padding: var(--space-2);
+            gap: var(--space-1);
+            flex: 1;
+        }
+
+        .view-tab {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-5);
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--neutral-400);
+            position: relative;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .view-tab.active {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .view-tab:not(.active):hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--neutral-200);
+        }
+
+        .tab-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .content-pane {
+            flex: 1;
+            border-radius: var(--radius-2xl);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pane-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            padding: var(--space-6);
+            overflow-y: auto;
+        }
+
+        .pane-content.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Dependency Graph */
+        .graph-container {
+            position: relative;
+            height: 100%;
+            border-radius: var(--radius-xl);
+            background: radial-gradient(circle at center, rgba(88, 101, 242, 0.05) 0%, transparent 60%);
+            overflow: hidden;
+        }
+
+        .graph-controls {
+            position: absolute;
+            top: var(--space-5);
+            left: var(--space-5);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+            max-width: 300px;
+        }
+
+        .control-panel {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-xl);
+            padding: var(--space-5);
+        }
+
+        .control-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--primary-300);
+            margin-bottom: var(--space-4);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .filter-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .filter-chip {
+            padding: var(--space-2) var(--space-3);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-xl);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--neutral-300);
+        }
+
+        .filter-chip:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .filter-chip.active {
+            background: var(--primary-500);
+            border-color: var(--primary-400);
+            color: white;
+            box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+        }
+
+        .graph-svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        .graph-svg:active {
+            cursor: grabbing;
+        }
+
+        /* Comments & Documentation Lists */
+        .content-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-4);
+        }
+
+        .list-filters {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .filter-btn {
+            padding: var(--space-2) var(--space-3);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--neutral-400);
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: var(--primary-500);
+            border-color: var(--primary-400);
+            color: white;
+        }
+
+        .comment-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-xl);
+            padding: var(--space-5);
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .comment-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(var(--space-2));
+            border-color: var(--primary-400);
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-3);
+        }
+
+        .comment-type {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .comment-type.todo {
+            color: var(--accent-warning);
+        }
+
+        .comment-type.fixme {
+            color: var(--accent-danger);
+        }
+
+        .comment-type.hack {
+            color: var(--accent-info);
+        }
+
+        .comment-type.doc {
+            color: var(--accent-success);
+        }
+
+        .priority-badge {
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--radius-lg);
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .priority-badge.high {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .priority-badge.medium {
+            background: var(--accent-warning);
+            color: var(--neutral-900);
+        }
+
+        .priority-badge.low {
+            background: var(--accent-success);
+            color: var(--neutral-900);
+        }
+
+        .comment-text {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--neutral-200);
+            margin-bottom: var(--space-3);
+            background: rgba(0, 0, 0, 0.3);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+            border-left: 3px solid var(--primary-500);
+            position: relative;
+        }
+
+        .comment-meta {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            font-size: 0.75rem;
+            color: var(--neutral-400);
+        }
+
+        .comment-file {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-family: var(--font-mono);
+        }
+
+        .comment-line {
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+        }
+
+        /* Right Panel - AI Insights */
+        .insights-panel {
+            grid-area: insights;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-5);
+        }
+
+        .insight-card {
+            border-radius: var(--radius-2xl);
+            padding: var(--space-6);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .insight-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-info), var(--accent-success));
+            opacity: 0.8;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl), var(--shadow-glow-accent);
+        }
+
+        .insight-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .insight-item {
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(255, 107, 107, 0.1));
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            border-radius: var(--radius-xl);
+            padding: var(--space-4);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .insight-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-500), var(--accent-danger));
+        }
+
+        .insight-item:hover {
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(255, 107, 107, 0.15));
+            transform: scale(1.02);
+        }
+
+        .insight-type {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary-300);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--space-2);
+        }
+
+        .insight-text {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: var(--neutral-200);
+        }
+
+        /* Quality Metrics */
+        .quality-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-xl);
+            padding: var(--space-4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .metric-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: scale(1.02);
+            border-color: var(--primary-400);
+        }
+
+        .metric-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .metric-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            color: white;
+        }
+
+        .metric-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--neutral-200);
+            margin-bottom: var(--space-1);
+        }
+
+        .metric-description {
+            font-size: 0.75rem;
+            color: var(--neutral-400);
+        }
+
+        .metric-score {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .score-value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary-300);
+        }
+
+        .score-trend {
+            font-size: 0.75rem;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-trend.up {
+            background: var(--accent-success);
+            color: var(--neutral-900);
+        }
+
+        .score-trend.down {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .score-trend.stable {
+            background: var(--neutral-600);
+            color: var(--neutral-200);
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1600px) {
+            .main-container {
+                grid-template-columns: 350px 1fr 380px;
+            }
+        }
+
+        @media (max-width: 1400px) {
+            .main-container {
+                grid-template-columns: 320px 1fr 350px;
+                gap: var(--space-5);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "content"
+                    "overview"
+                    "insights";
+                gap: var(--space-5);
+            }
+            
+            .overview-panel,
+            .insights-panel {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: var(--space-4);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                margin: var(--space-3);
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: var(--space-3);
+                padding: var(--space-4);
+            }
+            
+            .main-container {
+                margin: var(--space-3);
+                gap: var(--space-4);
+            }
+            
+            .view-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .view-tab {
+                flex: none;
+                min-width: 120px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            transition: background 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Focus States for Accessibility */
+        .focusable:focus {
+            outline: 2px solid var(--primary-400);
+            outline-offset: 2px;
+        }
+
+        /* Loading States */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Tooltip System */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            z-index: var(--z-tooltip);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Micro-interactions */
+        .interactive {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .interactive:hover {
+            transform: translateY(-2px);
+        }
+
+        .interactive:active {
+            transform: translateY(0);
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .glass,
+            .glass-strong,
+            .glass-accent {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
