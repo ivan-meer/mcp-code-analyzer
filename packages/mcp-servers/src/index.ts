@@ -1,329 +1,193 @@
-#!/usr/bin/env node
-
-/**
- * Рефакторинговая версия MCP Code Analyzer Server
- * Разбит на модули для лучшей поддержки и производительности
- */
-
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
-  CallToolRequestSchema,
+import { Server, StdioServerTransport, Transport } from '@modelcontextprotocol/sdk';
+import type {
+  AnalysisConfig,
+  FileAnalysis,
+  ProjectAnalysis,
+  TodoComment
+} from './types/analysis.types.js';
+import {
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-
 import { ProjectAnalyzer } from './analyzers/ProjectAnalyzer.js';
 import { FileAnalyzer } from './analyzers/FileAnalyzer.js';
-import { AnalysisConfig } from './types/analysis.types.js';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { glob } from 'glob';
 
 export class CodeAnalyzerServer {
   private server: Server;
   private projectAnalyzer: ProjectAnalyzer;
+  private fileAnalyzer: FileAnalyzer;
   private analysisCache = new Map<string, any>();
 
   constructor() {
     this.server = new Server({
       name: 'code-analyzer-server',
-      version: '2.0.0',
+      version: '2.1.0',
     });
 
-    // Настройка по умолчанию
-    const defaultConfig: AnalysisConfig = {
-      includeTests: true,
+    const config: AnalysisConfig = {
+      includeTests: false,
       analysisDepth: 'medium',
-      languages: ['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json'],
-      ignorePatterns: [
-        '**/node_modules/**',
-        '**/dist/**',
-        '**/build/**',
-        '**/.git/**',
-        '**/coverage/**'
-      ],
-      maxFileSize: 1024 * 1024 // 1MB
+      languages: ['typescript', 'javascript'],
+      ignorePatterns: ['node_modules'],
+      maxFileSize: 1024 * 1024
     };
+    this.projectAnalyzer = new ProjectAnalyzer(config);
+    this.fileAnalyzer = new FileAnalyzer(config);
 
-    this.projectAnalyzer = new ProjectAnalyzer(defaultConfig);
-    this.setupToolHandlers();
+    this.registerTools();
     this.setupErrorHandling();
   }
 
-  private setupToolHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        {
-          name: 'analyze_project',
-          description: 'Комплексный анализ структуры проекта с оптимизированной производительностью',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              projectPath: {
-                type: 'string',
-                description: 'Путь к корневой папке проекта'
-              },
-              includeTests: {
-                type: 'boolean',
-                description: 'Включать ли тестовые файлы в анализ',
-                default: true
-              },
-              analysisDepth: {
-                type: 'string',
-                enum: ['basic', 'medium', 'deep'],
-                description: 'Глубина анализа (basic - быстро, deep - подробно)',
-                default: 'medium'
-              },
-              useCache: {
-                type: 'boolean',
-                description: 'Использовать кеширование результатов',
-                default: true
-              }
-            },
-            required: ['projectPath']
-          }
-        },
-        {
-          name: 'analyze_file',
-          description: 'Детальный анализ отдельного файла',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              filePath: {
-                type: 'string',
-                description: 'Путь к файлу для анализа'
-              },
-              analysisDepth: {
-                type: 'string',
-                enum: ['basic', 'medium', 'deep'],
-                description: 'Глубина анализа файла',
-                default: 'medium'
-              }
-            },
-            required: ['filePath']
-          }
-        },
-        {
-          name: 'get_quick_stats',
-          description: 'Быстрая статистика по проекту без полного анализа',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              projectPath: {
-                type: 'string',
-                description: 'Путь к корневой папке проекта'
-              }
-            },
-            required: ['projectPath']
-          }
-        },
-        {
-          name: 'clear_cache',
-          description: 'Очистить кеш анализа',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              projectPath: {
-                type: 'string',
-                description: 'Путь к проекту для очистки кеша (опционально)'
-              }
-            }
-          }
-        }
-      ]
-    }));
+  private registerTools() {
+    this.server.registerTool({
+      name: 'analyze-project',
+      description: 'Analyze code project structure and metrics',
+      parameters: {
+        projectPath: { type: 'string', description: 'Path to project root' },
+        includeTests: { type: 'boolean', description: 'Include test files', default: false },
+      },
+      handler: this.analyzeProject.bind(this),
+    });
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
-      const { name, arguments: args } = request.params;
+    this.server.registerTool({
+      name: 'analyze-file',
+      description: 'Analyze single file',
+      parameters: {
+        filePath: { type: 'string', description: 'Path to file' },
+        depth: { type: 'string', enum: ['basic', 'medium', 'deep'], default: 'medium' },
+      },
+      handler: this.analyzeFile.bind(this),
+    });
 
-      try {
-        switch (name) {
-          case 'analyze_project':
-            return await this.handleAnalyzeProject(args);
-          
-          case 'analyze_file':
-            return await this.handleAnalyzeFile(args);
-          
-          case 'get_quick_stats':
-            return await this.handleGetQuickStats(args);
-          
-          case 'clear_cache':
-            return await this.handleClearCache(args);
-          
-          default:
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Unknown tool: ${name}`
-            );
-        }
-      } catch (error) {
-        if (error instanceof McpError) {
-          throw error;
-        }
-        console.error(`Error in ${name}:`, error);
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Error in ${name}: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
+    this.server.registerTool({
+      name: 'clear-cache',
+      description: 'Clear analysis cache',
+      parameters: {
+        projectId: { type: 'string', description: 'Project ID to clear', optional: true },
+      },
+      handler: this.clearCache.bind(this),
     });
   }
 
-  private async handleAnalyzeProject(args: {
+  private async analyzeProject(args: {
     projectPath: string;
     includeTests?: boolean;
-    analysisDepth?: 'basic' | 'medium' | 'deep';
-    useCache?: boolean;
-  }) {
-    const { projectPath, includeTests = true, analysisDepth = 'medium', useCache = true } = args;
+  }): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const { projectPath, includeTests = false } = args;
+    const projectId = path.basename(projectPath);
 
-    // Проверяем кеш
-    const cacheKey = `${projectPath}-${includeTests}-${analysisDepth}`;
-    if (useCache && this.analysisCache.has(cacheKey)) {
-      const cachedResult = this.analysisCache.get(cacheKey);
+    try {
+      const cached = this.analysisCache.get(projectId);
+      if (cached) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Using cached analysis results',
+            },
+            {
+              type: 'application/json',
+              text: 'Cached analysis data',
+              data: cached,
+            },
+          ],
+        };
+      }
+
+      const startTime = Date.now();
+      const analysis = await this.projectAnalyzer.analyze(projectPath, { includeTests });
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      this.analysisCache.set(projectId, analysis);
+
       return {
         content: [
           {
             type: 'text',
-            text: '📋 **Результат из кеша**\n\nАнализ уже выполнялся ранее. Используется кешированный результат для ускорения работы.'
+            text: this.formatProjectSummary(analysis, duration),
           },
           {
-            type: 'text',
-            text: JSON.stringify(cachedResult, null, 2)
-          }
-        ]
+            type: 'application/json',
+            text: 'Project analysis data',
+            data: analysis,
+          },
+        ],
       };
+    } catch (error) {
+      console.error('Project analysis error:', error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Project analysis failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-
-    // Обновляем конфигурацию
-    this.projectAnalyzer.updateConfig({
-      includeTests,
-      analysisDepth
-    });
-
-    console.error(`🚀 Начинаем анализ проекта: ${projectPath}`);
-    
-    const startTime = Date.now();
-    const analysis = await this.projectAnalyzer.analyzeProjectWithProgress(
-      projectPath,
-      (progress, currentFile) => {
-        if (progress % 10 === 0 || progress === 100) {
-          console.error(`📊 Прогресс: ${progress.toFixed(0)}% ${currentFile ? `- ${currentFile}` : ''}`);
-        }
-      }
-    );
-    
-    const endTime = Date.now();
-    const duration = ((endTime - startTime) / 1000).toFixed(2);
-
-    // Сохраняем в кеш
-    if (useCache) {
-      this.analysisCache.set(cacheKey, analysis);
-    }
-
-    const summary = this.formatProjectSummary(analysis, duration);
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: summary
-        },
-        {
-          type: 'text',
-          text: JSON.stringify(analysis, null, 2)
-        }
-      ]
-    };
   }
 
-  private async handleAnalyzeFile(args: {
+  private async analyzeFile(args: {
     filePath: string;
-    analysisDepth?: 'basic' | 'medium' | 'deep';
-  }) {
-    const { filePath, analysisDepth = 'medium' } = args;
+    depth?: 'basic' | 'medium' | 'deep';
+  }): Promise<{ content: Array<{ type: string; text: string; data?: unknown }> }> {
+    const { filePath, depth = 'medium' } = args;
 
-    const fileAnalyzer = new FileAnalyzer({
-      includeTests: true,
-      analysisDepth,
-      languages: ['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json'],
-      ignorePatterns: [],
-      maxFileSize: 1024 * 1024
-    });
-
-    const analysis = await fileAnalyzer.analyzeFile(filePath);
-    
-    const summary = this.formatFileSummary(analysis);
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: summary
-        },
-        {
-          type: 'text',
-          text: JSON.stringify(analysis, null, 2)
-        }
-      ]
-    };
-  }
-
-  private async handleGetQuickStats(args: { projectPath: string }) {
-    const { projectPath } = args;
-
-    const stats = await this.projectAnalyzer.getQuickStats(projectPath);
-    
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `📊 **Быстрая статистика проекта**\n\n` +
-                `- 📁 Файлов: ${stats.fileCount.toLocaleString()}\n` +
-                `- 🔤 Языки: ${stats.languages.join(', ')}\n` +
-                `- 💾 Размер: ${(stats.estimatedSize / 1024 / 1024).toFixed(1)} MB\n\n` +
-                `Для полного анализа используйте analyze_project.`
-        }
-      ]
-    };
-  }
-
-  private async handleClearCache(args: { projectPath?: string }) {
-    const { projectPath } = args;
-
-    if (projectPath) {
-      // Очищаем кеш для конкретного проекта
-      const keysToDelete = Array.from(this.analysisCache.keys())
-        .filter(key => key.startsWith(projectPath));
-      
-      keysToDelete.forEach(key => this.analysisCache.delete(key));
-      
+    try {
+      const analysis = await this.fileAnalyzer.analyze(filePath, depth);
       return {
         content: [
           {
             type: 'text',
-            text: `🗑️ Очищен кеш для проекта: ${projectPath}\nУдалено записей: ${keysToDelete.length}`
-          }
-        ]
+            text: this.formatFileSummary(analysis),
+          },
+          {
+            type: 'application/json',
+            text: 'File analysis data',
+            data: analysis,
+          },
+        ],
+      };
+    } catch (error) {
+      console.error('File analysis error:', error);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `File analysis failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private async clearCache(args: { projectId?: string }): Promise<{ content: Array<{ type: string; text: string }> }> {
+    const { projectId } = args;
+
+    if (projectId) {
+      const deleted = this.analysisCache.delete(projectId);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: deleted
+              ? `🗑️ Кеш анализа для проекта ${projectId} очищен`
+              : `⚠️ Проект ${projectId} не найден в кеше`,
+          },
+        ],
       };
     } else {
-      // Очищаем весь кеш
       const count = this.analysisCache.size;
       this.analysisCache.clear();
-      
       return {
         content: [
           {
             type: 'text',
-            text: `🗑️ Очищен весь кеш анализа\nУдалено записей: ${count}`
-          }
-        ]
+            text: `🗑️ Очищен весь кеш анализа\nУдалено записей: ${count}`,
+          },
+        ],
       };
     }
   }
 
-  private formatProjectSummary(analysis: any, duration: string): string {
-    const { metrics, files, todos, architecturePatterns } = analysis;
-    
+  private formatProjectSummary(analysis: ProjectAnalysis, duration: string): string {
+    const { metrics, architecturePatterns } = analysis;
+
     return `🎉 **Анализ проекта завершен!** ⏱️ ${duration}с\n\n` +
            `📊 **Основная статистика:**\n` +
            `- 📁 Файлов: ${metrics.totalFiles.toLocaleString()}\n` +
@@ -332,15 +196,10 @@ export class CodeAnalyzerServer {
            `- 🔤 Языков: ${metrics.languages.join(', ')}\n` +
            `- 📊 Средняя сложность: ${metrics.avgComplexity}\n` +
            `- 🧪 Покрытие тестами: ${metrics.testCoverage}%\n\n` +
-           `🏗️ **Архитектурные паттерны:**\n${architecturePatterns.map((p: string) => `- ${p}`).join('\n')}\n\n` +
-           `⚠️ **TODO комментарии:** ${todos.length}\n` +
-           `${todos.length > 0 ? `- FIXME: ${todos.filter((t: any) => t.type === 'FIXME').length}\n` +
-                                `- TODO: ${todos.filter((t: any) => t.type === 'TODO').length}\n` +
-                                `- HACK: ${todos.filter((t: any) => t.type === 'HACK').length}\n` : ''}` +
-           `\n📈 **Готово для визуализации!**`;
+           `🏗️ **Архитектурные паттерны:**\n${architecturePatterns.map(p => `- ${p}`).join('\n')}`;
   }
 
-  private formatFileSummary(analysis: any): string {
+  private formatFileSummary(analysis: FileAnalysis): string {
     return `📄 **Анализ файла: ${analysis.name}**\n\n` +
            `- 📊 Тип: ${analysis.type}\n` +
            `- 💾 Размер: ${(analysis.size / 1024).toFixed(1)} KB\n` +
@@ -375,17 +234,16 @@ export class CodeAnalyzerServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
+    const transport = new StdioServerTransport() as unknown as Transport;
     await this.server.connect(transport);
-    
-    console.error('🚀 MCP Code Analyzer Server v2.0 запущен и готов к работе!');
-    console.error('✨ Новые возможности: кеширование, batch обработка, улучшенная производительность');
   }
 }
 
-// Запуск сервера
-const server = new CodeAnalyzerServer();
-server.run().catch(error => {
-  console.error('💥 Критическая ошибка при запуске сервера:', error);
-  process.exit(1);
-});
+// Server entry point
+if (require.main === module) {
+  const server = new CodeAnalyzerServer();
+  server.run().catch(err => {
+    console.error('Server failed to start:', err);
+    process.exit(1);
+  });
+}
