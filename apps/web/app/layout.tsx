@@ -1,21 +1,16 @@
-import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { ThemeProvider } from '@/components/theme-provider-redesigned';
-import { Toaster } from '@/components/ui/toaster';
+import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'MCP Code Analyzer - Intelligent Code Analysis',
-  description: 'AI-powered code analysis and visualization platform built with Model Context Protocol',
-  keywords: ['code analysis', 'AI', 'visualization', 'MCP', 'developer tools'],
+  title: 'MCP Code Analyzer - Супер Интерфейс',
+  description: 'AI-powered код анализатор с MCP интеграцией и 3D визуализацией',
+  keywords: ['code analysis', 'AI', 'MCP', 'visualization', '3D'],
   authors: [{ name: 'MCP Code Analyzer Team' }],
-  openGraph: {
-    title: 'MCP Code Analyzer',
-    description: 'Transform your code into interactive visualizations',
-    type: 'website',
-  },
+  viewport: 'width=device-width, initial-scale=1',
+  themeColor: '#667eea',
 };
 
 export default function RootLayout({
@@ -24,17 +19,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru">
+      <head>
+        {/* Font Awesome */}
+        <link 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" 
+          rel="stylesheet" 
+        />
+        {/* Three.js */}
+        <script 
+          src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+          defer
+        ></script>
+        {/* D3.js */}
+        <script 
+          src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"
+          defer
+        ></script>
+      </head>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );

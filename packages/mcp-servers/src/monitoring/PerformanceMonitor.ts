@@ -1,242 +1,353 @@
 /**
- * Система мониторинга производительности
+ * 📊 Performance Monitor для MCP Code Analyzer
+ * 
+ * Система мониторинга производительности с автоматическим отслеживанием
+ * операций и генерацией детальных отчетов.
  */
 
-export interface PerformanceMetric {
+export interface PerformanceMetrics {
   operation: string;
   startTime: number;
   endTime?: number;
   duration?: number;
-  memoryUsage?: NodeJS.MemoryUsage;
+  memoryUsed?: number;
+  filesProcessed?: number;
+  status: 'running' | 'completed' | 'failed';
   metadata?: Record<string, any>;
 }
 
-export class PerformanceMonitor {
-  private metrics: PerformanceMetric[] = [];
-  private activeOperations: Map<string, PerformanceMetric> = new Map();
+export interface PerformanceReport {
+  summary: {
+    totalOperations: number;
+    completedOperations: number;
+    failedOperations: number;
+    averageDuration: number;
+    totalDuration: number;
+    peakMemoryUsage: number;
+  };
+  operations: PerformanceMetrics[];
+  recommendations: string[];
+  bottlenecks: Array<{
+    operation: string;
+    issue: string;
+    impact: 'low' | 'medium' | 'high';
+    suggestion: string;
+  }>;
+}
+
+class PerformanceMonitor {
+  private metrics: Map<string, PerformanceMetrics> = new Map();
+  private completed: PerformanceMetrics[] = [];
 
   /**
-   * Начинает отслеживание операции
+   * Начать отслеживание операции
    */
-  startOperation(operationId: string, metadata?: Record<string, any>): void {
-    const metric: PerformanceMetric = {
-      operation: operationId,
-      startTime: Date.now(),
-      memoryUsage: process.memoryUsage(),
+  startOperation(operation: string, metadata?: Record<string, any>): string {
+    const operationId = `${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const metric: PerformanceMetrics = {
+      operation,
+      startTime: performance.now(),
+      status: 'running',
       metadata
     };
 
-    this.activeOperations.set(operationId, metric);
+    this.metrics.set(operationId, metric);
+    console.log(`📊 [PERF] Started: ${operation} (ID: ${operationId})`);
+    
+    return operationId;
   }
 
   /**
-   * Завершает отслеживание операции
+   * Завершить отслеживание операции
    */
-  endOperation(operationId: string): PerformanceMetric | null {
-    const metric = this.activeOperations.get(operationId);
+  endOperation(operationId: string, filesProcessed?: number): void {
+    const metric = this.metrics.get(operationId);
     if (!metric) {
-      console.warn(`Operation ${operationId} not found`);
-      return null;
+      console.warn(`⚠️ [PERF] Operation not found: ${operationId}`);
+      return;
     }
 
-    metric.endTime = Date.now();
-    metric.duration = metric.endTime - metric.startTime;
+    const endTime = performance.now();
+    const duration = endTime - metric.startTime;
+    const memoryUsed = this.getCurrentMemoryUsage();
 
-    this.activeOperations.delete(operationId);
-    this.metrics.push(metric);
+    const completedMetric: PerformanceMetrics = {
+      ...metric,
+      endTime,
+      duration,
+      memoryUsed,
+      filesProcessed,
+      status: 'completed'
+    };
 
-    return metric;
+    this.completed.push(completedMetric);
+    this.metrics.delete(operationId);
+
+    console.log(`✅ [PERF] Completed: ${metric.operation} in ${duration.toFixed(2)}ms`);
   }
 
   /**
-   * Обертка для автоматического отслеживания async функций
+   * Отметить операцию как неудачную
    */
-  async trackOperation<T>(
-    operationName: string,
-    operation: () => Promise<T>,
-    metadata?: Record<string, any>
-  ): Promise<T> {
-    const operationId = `${operationName}-${Date.now()}-${Math.random()}`;
-    
-    this.startOperation(operationId, metadata);
-    
-    try {
-      const result = await operation();
-      this.endOperation(operationId);
-      return result;
-    } catch (error) {
-      const metric = this.endOperation(operationId);
-      if (metric) {
-        metric.metadata = { ...metric.metadata, error: String(error) };
-      }
-      throw error;
+  failOperation(operationId: string, error?: string): void {
+    const metric = this.metrics.get(operationId);
+    if (!metric) {
+      console.warn(`⚠️ [PERF] Operation not found: ${operationId}`);
+      return;
     }
+
+    const endTime = performance.now();
+    const duration = endTime - metric.startTime;
+
+    const failedMetric: PerformanceMetrics = {
+      ...metric,
+      endTime,
+      duration,
+      status: 'failed',
+      metadata: { ...metric.metadata, error }
+    };
+
+    this.completed.push(failedMetric);
+    this.metrics.delete(operationId);
+
+    console.log(`❌ [PERF] Failed: ${metric.operation} after ${duration.toFixed(2)}ms`);
   }
 
   /**
-   * Получает статистику по операциям
+   * Получить текущее использование памяти
    */
-  getStats(): {
-    totalOperations: number;
-    averageDuration: number;
-    slowestOperation: PerformanceMetric | null;
-    fastestOperation: PerformanceMetric | null;
-    operationsByType: Record<string, number>;
-    memoryTrends: Array<{ time: number; memory: number }>;
-  } {
-    if (this.metrics.length === 0) {
-      return {
-        totalOperations: 0,
-        averageDuration: 0,
-        slowestOperation: null,
-        fastestOperation: null,
-        operationsByType: {},
-        memoryTrends: []
-      };
+  private getCurrentMemoryUsage(): number {
+    if (typeof process !== 'undefined' && process.memoryUsage) {
+      return process.memoryUsage().heapUsed;
     }
+    // Для browser environment
+    if (typeof window !== 'undefined' && 'memory' in performance) {
+      return (performance as any).memory?.usedJSHeapSize || 0;
+    }
+    return 0;
+  }
 
-    const completedMetrics = this.metrics.filter(m => m.duration !== undefined);
-    const durations = completedMetrics.map(m => m.duration!);
-    
-    const averageDuration = durations.reduce((a, b) => a + b, 0) / durations.length;
-    
-    const slowestOperation = completedMetrics.reduce((slowest, current) => 
-      (current.duration! > slowest.duration!) ? current : slowest
-    );
-    
-    const fastestOperation = completedMetrics.reduce((fastest, current) => 
-      (current.duration! < fastest.duration!) ? current : fastest
-    );
+  /**
+   * Генерация детального отчета о производительности
+   */
+  getPerformanceReport(): PerformanceReport {
+    const totalOperations = this.completed.length;
+    const completedOps = this.completed.filter(m => m.status === 'completed');
+    const failedOps = this.completed.filter(m => m.status === 'failed');
 
-    const operationsByType: Record<string, number> = {};
-    completedMetrics.forEach(metric => {
-      const operationType = metric.operation.split('-')[0];
-      operationsByType[operationType] = (operationsByType[operationType] || 0) + 1;
-    });
+    const durations = completedOps.map(m => m.duration || 0);
+    const averageDuration = durations.length > 0 ? 
+      durations.reduce((sum, d) => sum + d, 0) / durations.length : 0;
+    const totalDuration = durations.reduce((sum, d) => sum + d, 0);
 
-    const memoryTrends = this.metrics
-      .filter(m => m.memoryUsage)
-      .map(m => ({
-        time: m.startTime,
-        memory: m.memoryUsage!.heapUsed
-      }));
+    const memoryUsages = this.completed.map(m => m.memoryUsed || 0);
+    const peakMemoryUsage = Math.max(...memoryUsages, 0);
+
+    // Анализ узких мест
+    const bottlenecks = this.detectBottlenecks(completedOps);
+    
+    // Рекомендации по оптимизации
+    const recommendations = this.generateRecommendations(completedOps, bottlenecks);
 
     return {
-      totalOperations: completedMetrics.length,
-      averageDuration: Math.round(averageDuration),
-      slowestOperation,
-      fastestOperation,
-      operationsByType,
-      memoryTrends
+      summary: {
+        totalOperations,
+        completedOperations: completedOps.length,
+        failedOperations: failedOps.length,
+        averageDuration,
+        totalDuration,
+        peakMemoryUsage
+      },
+      operations: this.completed,
+      recommendations,
+      bottlenecks
     };
   }
 
   /**
-   * Очищает старые метрики (старше указанного времени)
+   * Обнаружение узких мест в производительности
    */
-  cleanup(maxAgeMs: number = 24 * 60 * 60 * 1000): void {
-    const cutoffTime = Date.now() - maxAgeMs;
-    this.metrics = this.metrics.filter(metric => metric.startTime > cutoffTime);
-  }
+  private detectBottlenecks(operations: PerformanceMetrics[]): Array<{
+    operation: string;
+    issue: string;
+    impact: 'low' | 'medium' | 'high';
+    suggestion: string;
+  }> {
+    const bottlenecks = [];
 
-  /**
-   * Получает отчет по производительности
-   */
-  getPerformanceReport(): string {
-    const stats = this.getStats();
-    
-    if (stats.totalOperations === 0) {
-      return 'Нет данных о производительности';
+    // Группировка по типам операций
+    const operationGroups = this.groupByOperation(operations);
+
+    for (const [operationType, ops] of operationGroups) {
+      const durations = ops.map(op => op.duration || 0);
+      const avgDuration = durations.reduce((sum, d) => sum + d, 0) / durations.length;
+      const maxDuration = Math.max(...durations);
+
+      // Долгие операции
+      if (avgDuration > 5000) { // 5 секунд
+        bottlenecks.push({
+          operation: operationType,
+          issue: `Средняя длительность ${avgDuration.toFixed(0)}ms`,
+          impact: avgDuration > 10000 ? 'high' : 'medium',
+          suggestion: 'Рассмотрите кеширование или оптимизацию алгоритма'
+        });
+      }
+
+      // Большой разброс в производительности
+      if (maxDuration > avgDuration * 3) {
+        bottlenecks.push({
+          operation: operationType,
+          issue: `Неконсистентная производительность (макс: ${maxDuration.toFixed(0)}ms, среднее: ${avgDuration.toFixed(0)}ms)`,
+          impact: 'medium',
+          suggestion: 'Проверьте условия выполнения и размер входных данных'
+        });
+      }
+
+      // Высокое потребление памяти
+      const memoryUsages = ops.map(op => op.memoryUsed || 0);
+      const avgMemory = memoryUsages.reduce((sum, m) => sum + m, 0) / memoryUsages.length;
+      if (avgMemory > 100 * 1024 * 1024) { // 100MB
+        bottlenecks.push({
+          operation: operationType,
+          issue: `Высокое потребление памяти: ${(avgMemory / 1024 / 1024).toFixed(1)}MB`,
+          impact: 'high',
+          suggestion: 'Оптимизируйте использование памяти, используйте streaming'
+        });
+      }
     }
 
-    return `📊 **Отчет по производительности**
-
-🔢 **Общая статистика:**
-- Всего операций: ${stats.totalOperations}
-- Среднее время: ${stats.averageDuration}ms
-- Самая медленная: ${stats.slowestOperation?.operation} (${stats.slowestOperation?.duration}ms)
-- Самая быстрая: ${stats.fastestOperation?.operation} (${stats.fastestOperation?.duration}ms)
-
-📈 **Операции по типам:**
-${Object.entries(stats.operationsByType)
-  .map(([type, count]) => `- ${type}: ${count}`)
-  .join('\n')}
-
-💾 **Память:**
-- Текущее использование: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB
-- Максимум за сессию: ${Math.round(Math.max(...stats.memoryTrends.map(t => t.memory)) / 1024 / 1024)}MB`;
+    return bottlenecks;
   }
 
   /**
-   * Экспортирует метрики в JSON
+   * Группировка операций по типу
+   */
+  private groupByOperation(operations: PerformanceMetrics[]): Map<string, PerformanceMetrics[]> {
+    const groups = new Map<string, PerformanceMetrics[]>();
+
+    for (const op of operations) {
+      const group = groups.get(op.operation) || [];
+      group.push(op);
+      groups.set(op.operation, group);
+    }
+
+    return groups;
+  }
+
+  /**
+   * Генерация рекомендаций по оптимизации
+   */
+  private generateRecommendations(
+    operations: PerformanceMetrics[], 
+    bottlenecks: any[]
+  ): string[] {
+    const recommendations = [];
+
+    if (operations.length === 0) {
+      return ['Недостаточно данных для анализа. Проведите больше операций.'];
+    }
+
+    // Общие рекомендации
+    const avgDuration = operations.reduce((sum, op) => sum + (op.duration || 0), 0) / operations.length;
+    
+    if (avgDuration > 2000) {
+      recommendations.push('⚡ Рассмотрите добавление кеширования для часто используемых операций');
+    }
+
+    if (bottlenecks.length > 0) {
+      recommendations.push('🔍 Обнаружены узкие места в производительности - см. секцию "Bottlenecks"');
+    }
+
+    // Рекомендации по памяти
+    const memoryUsages = operations.map(op => op.memoryUsed || 0);
+    const maxMemory = Math.max(...memoryUsages);
+    if (maxMemory > 200 * 1024 * 1024) { // 200MB
+      recommendations.push('💾 Высокое потребление памяти - рассмотрите streaming обработку файлов');
+    }
+
+    // Рекомендации по количеству файлов
+    const fileProcessingOps = operations.filter(op => op.filesProcessed && op.filesProcessed > 0);
+    if (fileProcessingOps.length > 0) {
+      const avgFilesPerSec = fileProcessingOps.reduce((sum, op) => {
+        const duration = (op.duration || 1) / 1000; // в секундах
+        return sum + ((op.filesProcessed || 0) / duration);
+      }, 0) / fileProcessingOps.length;
+
+      if (avgFilesPerSec < 10) {
+        recommendations.push('📁 Низкая скорость обработки файлов - добавьте параллельную обработку');
+      }
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push('✅ Производительность в норме! Продолжайте мониторинг.');
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Очистить собранные метрики
+   */
+  clear(): void {
+    this.metrics.clear();
+    this.completed.length = 0;
+    console.log('🧹 [PERF] Metrics cleared');
+  }
+
+  /**
+   * Экспорт метрик в JSON
    */
   exportMetrics(): string {
     return JSON.stringify({
-      metrics: this.metrics,
-      stats: this.getStats(),
-      exportTime: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      running: Array.from(this.metrics.values()),
+      completed: this.completed,
+      report: this.getPerformanceReport()
     }, null, 2);
   }
-
-  /**
-   * Проверяет, есть ли проблемы с производительностью
-   */
-  detectPerformanceIssues(): {
-    issues: string[];
-    severity: 'low' | 'medium' | 'high';
-  } {
-    const stats = this.getStats();
-    const issues: string[] = [];
-    let severity: 'low' | 'medium' | 'high' = 'low';
-
-    // Проверяем среднее время выполнения
-    if (stats.averageDuration > 5000) {
-      issues.push('Высокое среднее время выполнения операций');
-      severity = 'high';
-    } else if (stats.averageDuration > 2000) {
-      issues.push('Повышенное время выполнения операций');
-      severity = 'medium';
-    }
-
-    // Проверяем использование памяти
-    const currentMemoryMB = process.memoryUsage().heapUsed / 1024 / 1024;
-    if (currentMemoryMB > 500) {
-      issues.push('Высокое потребление памяти');
-      severity = 'high';
-    } else if (currentMemoryMB > 200) {
-      issues.push('Повышенное потребление памяти');
-      if (severity === 'low') severity = 'medium';
-    }
-
-    // Проверяем наличие очень медленных операций
-    if (stats.slowestOperation && stats.slowestOperation.duration! > 10000) {
-      issues.push(`Обнаружена очень медленная операция: ${stats.slowestOperation.operation}`);
-      severity = 'high';
-    }
-
-    return { issues, severity };
-  }
 }
 
-/**
- * Глобальный экземпляр монитора производительности
- */
-export const performanceMonitor = new PerformanceMonitor();
-
-/**
- * Декоратор для автоматического отслеживания методов класса
- */
-export function trackPerformance(operationName?: string) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
-    const method = descriptor.value;
-    const name = operationName || `${target.constructor.name}.${propertyName}`;
+// Декоратор для автоматического мониторинга функций
+export function trackPerformance(operationName: string) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
-      return performanceMonitor.trackOperation(
-        name,
-        () => method.apply(this, args),
-        { args: args.length }
+      const operationId = performanceMonitor.startOperation(
+        `${operationName || propertyKey}`,
+        { 
+          className: target.constructor.name,
+          method: propertyKey,
+          args: args.length 
+        }
       );
+
+      try {
+        const result = await originalMethod.apply(this, args);
+        performanceMonitor.endOperation(operationId);
+        return result;
+      } catch (error) {
+        performanceMonitor.failOperation(operationId, error.message);
+        throw error;
+      }
     };
+
+    return descriptor;
   };
 }
+
+// Глобальный экземпляр монитора
+export const performanceMonitor = new PerformanceMonitor();
+
+// Автоматический вывод статистики каждые 30 секунд в dev режиме
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  setInterval(() => {
+    const report = performanceMonitor.getPerformanceReport();
+    if (report.summary.totalOperations > 0) {
+      console.log('📊 [PERF] Periodic Report:', report.summary);
+    }
+  }, 30000);
+}
+
+export default PerformanceMonitor;

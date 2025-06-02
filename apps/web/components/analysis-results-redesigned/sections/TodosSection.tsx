@@ -34,16 +34,59 @@ import { VirtualList } from '@/components/shared/VirtualList';
 import { TodoItem } from '@/components/shared/DependencyAndTodoItems';
 
 interface TodosSectionProps {
-  todos: ProjectTodo[];
+  todos: Array<ProjectTodo & { type: 'TODO' | 'FIXME' | 'HACK' | 'NOTE' }>;
   projectPath: string;
   onFileNavigate?: (filePath: string, line?: number) => void;
   className?: string;
 }
 
 /**
+ * Компонент для отображения статистики по TODO
+ */
+const TodosOverview: React.FC<{ todos: Array<ProjectTodo & { type: 'TODO' | 'FIXME' | 'HACK' | 'NOTE' }> }> = ({ todos }) => {
+  const totalCount = todos.length;
+  const criticalCount = todos.filter(t => t.type === 'FIXME').length;
+  const todoCount = todos.filter(t => t.type === 'TODO').length;
+  const hackCount = todos.filter(t => t.type === 'HACK').length;
+  const noteCount = todos.filter(t => t.type === 'NOTE').length;
+
+  return (
+    <div className="flex items-center space-x-4 text-sm">
+      <div className="flex items-center space-x-1">
+        <AlertCircle className="h-4 w-4 text-red-500" />
+        <span>{criticalCount}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <Lightbulb className="h-4 w-4 text-blue-500" />
+        <span>{todoCount}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <Wrench className="h-4 w-4 text-orange-500" />
+        <span>{hackCount}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <Calendar className="h-4 w-4 text-green-500" />
+        <span>{noteCount}</span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <span className="text-slate-500 dark:text-slate-400">Всего:</span>
+        <span>{totalCount}</span>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Типы TODO с их конфигурацией
  */
-const TODO_TYPES = {
+const TODO_TYPES: Record<'FIXME' | 'TODO' | 'HACK' | 'NOTE', {
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  priority: number;
+  label: string;
+  description: string;
+}> = {
   FIXME: {
     icon: AlertCircle,
     color: 'text-red-500',
@@ -292,8 +335,8 @@ const PriorityQueue: React.FC<{
 }> = ({ todos, onFileClick }) => {
   const prioritizedTodos = useMemo(() => {
     return [...todos].sort((a, b) => {
-      const aPriority = TODO_TYPES[a.type as keyof typeof TODO_TYPES]?.priority || 999;
-      const bPriority = TODO_TYPES[b.type as keyof typeof TODO_TYPES]?.priority || 999;
+      const aPriority = TODO_TYPES[a.type as keyof typeof TODO_TYPES].priority;
+      const bPriority = TODO_TYPES[b.type as keyof typeof TODO_TYPES].priority;
       return aPriority - bPriority;
     });
   }, [todos]);
@@ -339,28 +382,42 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('list');
 
-  // Используем хук фильтрации для TODO
+  // Используем хук фильтрации для TODO с адаптером типов
   const {
     filteredTodos,
-    filters,
+    filters: rawFilters,
     search,
-    updateFilters,
+    updateFilters: rawUpdateFilters,
     quickSearch,
     resetFilters,
     availableTodoTypes,
     stats
-  } = useTodoFiltering(todos);
+  } = useTodoFiltering(todos as Array<ProjectTodo & { type: 'TODO' | 'FIXME' | 'HACK' | 'NOTE' }>);
 
-  // Подготовка фильтров
+  // Адаптер для преобразования FilterState в формат, ожидаемый SearchFilter
+  const filters = useMemo(() => ({
+    todoTypes: rawFilters.todoTypes || []
+  }), [rawFilters]);
+
+  // Адаптер для преобразования вызовов SearchFilter в формат useTodoFiltering
+  const updateFilters = useCallback((groupId: string, values: string[]) => {
+    if (groupId === 'todoTypes') {
+      rawUpdateFilters({ todoTypes: values });
+    }
+  }, [rawUpdateFilters]);
+
+  // Подготовка фильтров с учетом строгой типизации
   const filterGroups = useMemo(() => [
     {
       id: 'todoTypes',
       label: 'Типы задач',
-      options: availableTodoTypes.map(type => ({
-        id: type,
-        label: TODO_TYPES[type as keyof typeof TODO_TYPES]?.label || type,
-        count: todos.filter(t => t.type === type).length
-      })),
+      options: (['FIXME', 'TODO', 'HACK', 'NOTE'] as const)
+        .filter(type => availableTodoTypes.includes(type))
+        .map(type => ({
+          id: type,
+          label: TODO_TYPES[type].label,
+          count: todos.filter(t => t.type === type).length
+        })),
       multiSelect: true
     }
   ], [availableTodoTypes, todos]);
@@ -455,7 +512,23 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
         </div>
 
         {/* Статистика */}
-        <TodosStatistics todos={todos} />
+        <div className="grid grid-cols-4 gap-4 mt-4">
+          {Object.entries(TODO_TYPES).map(([type, config]) => {
+            const count = todos.filter(t => t.type === type).length;
+            if (count === 0) return null;
+            
+            return (
+              <div 
+                key={type}
+                className={`${config.bgColor} p-4 rounded-lg flex flex-col items-center justify-center`}
+              >
+                <config.icon className={`h-6 w-6 ${config.color} mb-2`} />
+                <div className="text-2xl font-bold">{count}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">{config.label}</div>
+              </div>
+            );
+          })}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -561,11 +634,6 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {filteredTodos.reduce((acc, todo) => {
-                      const fileName = todo.file_path.split('/').pop() || todo.file_path;
-                      acc[fileName] = (acc[fileName] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>)}
                     {Object.entries(
                       filteredTodos.reduce((acc, todo) => {
                         const fileName = todo.file_path.split('/').pop() || todo.file_path;

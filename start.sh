@@ -1,70 +1,43 @@
 #!/bin/bash
 
-echo "🚀 Запуск MCP Code Analyzer..."
+# 🚀 MCP Code Analyzer - Супер запуск
 
-# Проверяем зависимости
-echo "📦 Проверяем зависимости..."
+echo "🚀 Запуск MCP Code Analyzer - Супер Интерфейс"
+echo "=============================================="
+
+# Проверка Node.js
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js не установлен!"
+    echo "❌ Node.js не найден! Установите Node.js 18+ и попробуйте снова."
     exit 1
 fi
 
-if ! command -v python &> /dev/null; then
-    echo "❌ Python не установлен!"
+# Проверка Python
+if ! command -v python &> /dev/null && ! command -v python3 &> /dev/null; then
+    echo "❌ Python не найден! Установите Python 3.8+ и попробуйте снова."
     exit 1
 fi
 
-# Устанавливаем зависимости для монорепо
-echo "📦 Устанавливаем зависимости..."
-npm install
+echo "✅ Все зависимости найдены"
 
-# Собираем MCP сервер
-echo "🔨 Собираем MCP сервер..."
-cd packages/mcp-servers
-npm install
-npm run build
-cd ../..
+# Установка пакетов если нужно
+if [ ! -d "node_modules" ]; then
+    echo "📦 Установка зависимостей..."
+    npm run install:all
+fi
 
-# Запускаем FastAPI backend в фоне
-echo "🐍 Запускаем FastAPI backend..."
-cd apps/api
-pip install -r requirements.txt
-python main.py &
-BACKEND_PID=$!
-echo "Backend PID: $BACKEND_PID"
-cd ../..
+# Запуск всех сервисов
+echo "🚀 Запуск всех сервисов..."
+echo ""
+echo "🌐 Frontend:  http://localhost:3000"
+echo "🔧 Backend:   http://localhost:8000"
+echo "⚡ MCP:       http://localhost:3001"
+echo ""
 
-# Ждем пока backend запустится
-echo "⏳ Ждем запуска backend..."
-sleep 5
+# Запуск в фоне
+npm run start
 
-# Запускаем Next.js frontend
-echo "⚛️ Запускаем Next.js frontend..."
-cd apps/web
-npm install
-npm run dev &
-FRONTEND_PID=$!
-echo "Frontend PID: $FRONTEND_PID"
-cd ../..
-
-echo "✅ Все сервисы запущены!"
-echo "🌐 Frontend: http://localhost:3000"
-echo "📚 API Docs: http://localhost:8000/docs"
+echo ""
+echo "✨ Все сервисы запущены!"
+echo "Откройте браузер и перейдите на http://localhost:3000"
 echo ""
 echo "Для остановки нажмите Ctrl+C"
-
-# Функция для остановки всех процессов
-cleanup() {
-    echo ""
-    echo "🛑 Останавливаем сервисы..."
-    kill $BACKEND_PID 2>/dev/null
-    kill $FRONTEND_PID 2>/dev/null
-    echo "✅ Готово!"
-    exit 0
-}
-
-# Перехватываем сигнал остановки
-trap cleanup SIGINT SIGTERM
-
-# Ждем
-wait

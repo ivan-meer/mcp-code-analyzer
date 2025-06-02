@@ -13,7 +13,9 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { ProjectFile, ProjectTodo, FilterState, SearchState } from '@/types/analysis.types';
+import { ProjectFile } from '@/types/analysis.types';
+import { ProjectTodo } from '@/types/todos.types';
+import { FilterState, SearchState } from '@/types/analysis.types';
 
 /**
  * Функция для "debouncing" - задержки выполнения функции
@@ -149,11 +151,13 @@ export const useFiltering = <T extends ProjectFile | ProjectTodo>(
    * Функция для проверки, соответствует ли TODO фильтрам
    */
   const matchesTodoFilters = useCallback((todo: ProjectTodo, filterState: FilterState): boolean => {
-    // Фильтр по типам TODO
-    if (filterState.todoTypes.length > 0 && !filterState.todoTypes.includes(todo.type)) {
-      return false;
+    // Фильтр по типам TODO с учетом строгой типизации
+    if (filterState.todoTypes.length > 0) {
+      const todoType = todo.type as 'TODO' | 'FIXME' | 'HACK' | 'NOTE';
+      if (!filterState.todoTypes.includes(todoType)) {
+        return false;
+      }
     }
-
     return true;
   }, []);
 
@@ -326,7 +330,7 @@ export const useFileFiltering = (files: ProjectFile[]) => {
 /**
  * Специализированный хук для фильтрации TODO комментариев
  */
-export const useTodoFiltering = (todos: ProjectTodo[]) => {
+export const useTodoFiltering = (todos: Array<ProjectTodo & { type: 'TODO' | 'FIXME' | 'HACK' | 'NOTE' }>) => {
   const filtering = useFiltering(todos, {
     todoTypes: []
   }, {
