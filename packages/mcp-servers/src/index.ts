@@ -113,7 +113,7 @@ export class CodeAnalyzerServer {
           {
             type: 'application/json',
             text: 'Project analysis data',
-            data: analysis,
+            data: analysis as unknown,
           },
         ],
       };
