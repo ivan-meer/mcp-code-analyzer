@@ -20,6 +20,16 @@ export class ProjectAnalyzer {
     this.architectureDetector = new ArchitectureDetector();
   }
 
+  /**
+   * Алиас для analyzeProject для обратной совместимости
+   */
+  async analyze(projectPath: string, options?: { includeTests?: boolean }): Promise<ProjectAnalysis> {
+    if (options?.includeTests) {
+      this.updateConfig({ includeTests: true });
+    }
+    return this.analyzeProject(projectPath);
+  }
+
   async analyzeProject(projectPath: string): Promise<ProjectAnalysis> {
     // Проверяем существование папки
     try {

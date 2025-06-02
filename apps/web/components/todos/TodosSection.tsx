@@ -17,10 +17,10 @@ import { VirtualList } from '@/components/shared/VirtualList';
 import { TodoItem } from '@/components/shared/DependencyAndTodoItems';
 
 // Импорт подкомпонентов
-import { TodosStatistics } from './todos/TodosStatistics';
-import { PriorityQueue } from './todos/PriorityQueue';
-import { TodosByFiles } from './todos/TodosByFiles';
-import { TodosAnalytics } from './todos/TodosAnalytics';
+import { TodosStatistics } from '@/components/todos/TodosStatistics';
+import { PriorityQueue } from '@/components/todos/PriorityQueue';
+import { TodosByFiles } from '@/components/todos/TodosByFiles';
+import { TodosAnalytics } from '@/components/todos/TodosAnalytics';
 
 interface TodosSectionProps {
   todos: ProjectTodo[];
@@ -141,15 +141,15 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
           
           <div className="flex items-center space-x-2">
             <Button 
-              variant="outline" 
-              size="sm" 
+              className="outline"
+              size="sm"="sm"
               onClick={() => handleExport('csv')}
             >
               <Download className="h-4 w-4 mr-2" />
               CSV
             </Button>
             <Button 
-              variant="outline" 
+              className="outline"
               size="sm" 
               onClick={() => handleExport('json')}
             >
@@ -170,8 +170,8 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
           searchValue={search.query}
           onSearchChange={quickSearch}
           filterGroups={filterGroups}
-          activeFilters={filters}
-          onFilterChange={updateFilters}
+          activeFilters={filters as unknown as { [groupId: string]: string[] }}
+          onFilterChange={(groupId, values) => updateFilters({ [groupId]: values })}
           totalItems={todos.length}
           filteredItems={stats.filteredItems}
           onClearAll={resetFilters}

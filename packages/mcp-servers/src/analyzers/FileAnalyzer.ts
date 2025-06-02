@@ -11,6 +11,16 @@ export class FileAnalyzer {
     'js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json', 'md', 'txt'
   ]);
 
+  /**
+   * Алиас для analyzeFile для обратной совместимости
+   */
+  async analyze(filePath: string, depth?: 'basic' | 'medium' | 'deep'): Promise<FileAnalysis> {
+    if (depth) {
+      this.config.analysisDepth = depth;
+    }
+    return this.analyzeFile(filePath);
+  }
+
   private static readonly TODO_PATTERNS = [
     /\/\/\s*(TODO|FIXME|HACK|NOTE)[\s:]*(.+)/gi,
     /#\s*(TODO|FIXME|HACK|NOTE)[\s:]*(.+)/gi,

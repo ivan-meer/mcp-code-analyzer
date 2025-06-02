@@ -2,28 +2,24 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import ModernNavbar from '@/components/modern-navbar';
-import { HeroSection } from '@/components/hero-section';
-import { ModernFeaturesGrid } from '@/components/modern-features-grid';
-import { ProjectInput } from '@/components/project-input-redesigned';
-import { LoadingState } from '@/components/loading-state';
-import { ModernFooter } from '@/components/modern-footer';
-import { AIStatusCard } from '@/components/ai-status-card';
-import { AnalysisResults } from '@/components/analysis-results-simple';
-import { generateSampleReactProject, generateSamplePythonProject } from '@/lib/sample-data';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Component as Lightning } from '@/components/ui/lightning';
-// 🚀 Импортируем наши новые интеллектуальные системы
-import { NotificationProvider, useNotifications } from '@/components/notification-system';
-import { ProgressMonitor } from '@/components/progress-monitor';
+import ModernNavbar from 'components/modern-navbar';
+import { ModernFeaturesGrid } from 'components/modern-features-grid';
+import { ProjectInput } from 'components/project-input-redesigned';
+import { ModernFooter } from 'components/modern-footer';
+import { AIStatusCard } from 'components/ai-status-card';
+import { AnalysisResults } from 'components/analysis-results-redesigned/AnalysisResults';
+import { generateSampleReactProject, generateSamplePythonProject } from 'lib/sample-data';
+import { Button } from 'components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'components/ui/card';
+import { Badge } from 'components/ui/badge';
+import { Component as Lightning } from 'components/ui/lightning';
+import { useNotifications } from 'components/notification-system';
+import { ProgressMonitor } from 'components/progress-monitor';
 import {
   Code2,
   Sparkles,
   Eye,
   FileText,
-  GitBranch,
   ArrowLeft,
   Lightbulb
 } from 'lucide-react';
@@ -37,7 +33,7 @@ interface SseProgressEvent {
   filesProcessed?: number;
   totalFiles?: number;
   logMessage?: string;
-  metadata?: any; // Optional: if backend sends additional metadata
+  metadata?: any;
 }
 
 interface ProjectAnalysis {
@@ -70,27 +66,21 @@ interface ProjectAnalysis {
   architecture_patterns: string[];
 }
 
-// 🎯 Главный компонент с интегрированными системами мониторинга
-function HomePageContent() {
+function HomePage() {
   const [projectPath, setProjectPath] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ProjectAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDemo, setShowDemo] = useState(false);
   const [demoType, setDemoType] = useState<'react' | 'python'>('react');
-
-  // Новое: состояние для projectId и прогресса анализа
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [progress, setProgress] = useState<SseProgressEvent | null>(null); // Updated type
-  const [analysisStartTime, setAnalysisStartTime] = useState<Date | null>(null); // For tracking start time
-  const [progressLogs, setProgressLogs] = useState<Array<{timestamp: Date; stage: SseProgressEvent['stage']; message: string}>>([]); // For storing logs
+  const [progress, setProgress] = useState<SseProgressEvent | null>(null);
+  const [analysisStartTime, setAnalysisStartTime] = useState<Date | null>(null);
+  const [progressLogs, setProgressLogs] = useState<Array<{timestamp: Date; stage: SseProgressEvent['stage']; message: string}>>([]);
   const sseRef = React.useRef<EventSource | null>(null);
 
-  // 🔔 Подключаемся к системе уведомлений
   const { notifySuccess, notifyError, notifyInfo, notifyProgress, removeNotification } = useNotifications();
 
   const loadSampleProject = (type: 'react' | 'python') => {
-    // 📢 Уведомляем пользователя о начале демонстрации
     const progressId = notifyProgress(
       'Загружаем демо проект',
       `Подготавливаем ${type === 'react' ? 'React' : 'Python'} демонстрацию...`
@@ -102,12 +92,11 @@ function HomePageContent() {
     setTimeout(() => {
       const sampleData = type === 'react' ? generateSampleReactProject() : generateSamplePythonProject();
 
-      // Transform sample data to match expected interface
       const transformedResult: ProjectAnalysis = {
         project_path: `sample-${type}-project/`,
         files: sampleData.files.map(file => ({
           ...file,
-          imports: file.imports || [] // Ensure imports is always an array
+          imports: file.imports || []
         })),
         dependencies: sampleData.dependencies,
         metrics: {
@@ -125,7 +114,6 @@ function HomePageContent() {
       setDemoType(type);
       setIsAnalyzing(false);
 
-      // 🎉 Уведомляем об успешной загрузке демо
       removeNotification(progressId);
       notifySuccess(
         'Демо проект загружен!',
@@ -142,16 +130,12 @@ function HomePageContent() {
       return;
     }
 
-    // Генерируем projectId для анализа и SSE
     const newProjectId = Math.random().toString(36).slice(2) + Date.now();
-    setProjectId(newProjectId);
 
-    // Reset states for new analysis
     setProgress(null);
-    setAnalysisStartTime(new Date()); // Set start time
-    setProgressLogs([]); // Clear previous logs
+    setAnalysisStartTime(new Date());
+    setProgressLogs([]);
 
-    // 🚀 Начинаем анализ с уведомлениями
     const progressId = notifyProgress(
       'Начинаем анализ проекта',
       `Подключаемся к AI-движку для анализа: ${projectPath.trim()}`
@@ -161,17 +145,14 @@ function HomePageContent() {
     setError(null);
     setShowDemo(false);
 
-    // 📝 Логируем начало анализа
     console.log('🎯 Запуск интеллектуального анализа проекта:', {
       projectPath: projectPath.trim(),
       timestamp: new Date().toISOString(),
       sessionId: Math.random().toString(36).slice(2) + Date.now()
     });
 
-    // Очистка пути от лишних пробелов и дублирований
     const cleanedPath = projectPath.trim().replace(/\s+/g, ' ').split(' ')[0];
 
-    // SSE подписка на прогресс
     if (sseRef.current) {
       sseRef.current.close();
       sseRef.current = null;
@@ -185,7 +166,6 @@ function HomePageContent() {
         if (data.logMessage) {
           setProgressLogs(prevLogs => [...prevLogs, { timestamp: new Date(), stage: data.stage, message: data.logMessage || 'No message provided' }]);
         }
-        // Close SSE connection on completion or error from server-sent event
         if (data.stage === 'completed' || data.stage === 'error') {
           if (sseRef.current) {
             sseRef.current.close();
@@ -203,25 +183,22 @@ function HomePageContent() {
         sseRef.current.close();
         sseRef.current = null;
       }
-      // Optionally, notify the user or set an error state for SSE connection failure
-      // For now, it just closes. Backend errors during analysis will be sent as 'error' stage events.
     };
 
     try {
-      // 🚀 Переключаемся на мощный FastAPI сервер с AI интеграцией
       console.log('🎯 Начинаем интеллектуальный анализ проекта:', cleanedPath, 'Project ID:', newProjectId);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'; // This is for the main analysis API call
-      const response = await fetch(`${apiUrl}/api/analyze`, { // Ensure this is the correct API endpoint for starting analysis
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          projectPath: cleanedPath, // Backend expects `projectPath` based on previous subtask
+          projectPath: cleanedPath,
           projectId: newProjectId,
-          includeTests: true, // Backend expects `includeTests`
-          analysisDepth: 'medium' // Backend expects `analysisDepth`
+          includeTests: true,
+          analysisDepth: 'medium'
         }),
       });
 
@@ -229,7 +206,6 @@ function HomePageContent() {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || errorData.detail || `HTTP ${response.status}: ${response.statusText}`;
 
-        // 📊 Детализированная обработка различных типов ошибок
         if (response.status === 404) {
           throw new Error(`Проект не найден: ${cleanedPath}. Проверьте правильность пути.`);
         } else if (response.status === 403) {
@@ -245,7 +221,6 @@ function HomePageContent() {
 
       const result = await response.json();
 
-      // 🎉 Логируем успешное завершение анализа
       console.log('✅ Анализ завершён успешно:', {
         files: result.files?.length || 0,
         totalLines: result.metrics?.total_lines || 0,
@@ -254,7 +229,6 @@ function HomePageContent() {
 
       setAnalysisResult(result);
 
-      // 🏆 Показываем успешное завершение
       removeNotification(progressId);
       notifySuccess(
         'Анализ завершён успешно!',
@@ -270,7 +244,6 @@ function HomePageContent() {
       );
 
     } catch (err) {
-      // 🚨 Комплексная система обработки и логирования ошибок
       const errorMessage = err instanceof Error ? err.message : 'Произошла неизвестная ошибка';
 
       console.error('❌ Ошибка при анализе проекта:', {
@@ -283,13 +256,12 @@ function HomePageContent() {
 
       setError(errorMessage);
 
-      // 💥 Показываем подробную ошибку пользователю
       removeNotification(progressId);
       notifyError(
         'Ошибка анализа проекта',
         errorMessage,
         {
-          persistent: true, // Ошибки не исчезают автоматически
+          persistent: true,
           metadata: {
             projectPath: cleanedPath,
             errorType: err instanceof Error ? err.name : 'UnknownError',
@@ -312,7 +284,6 @@ function HomePageContent() {
     setProjectPath('');
     setError(null);
 
-    // 🏠 Уведомляем о возврате на главную
     notifyInfo('Возврат на главную', 'Готовы к новому анализу проекта');
   };
 
@@ -320,11 +291,9 @@ function HomePageContent() {
     <div className="min-h-screen gradient-mesh">
       <ModernNavbar />
 
-      {/* Main Content */}
       <main className="pt-16 lg:pt-20">
         {!analysisResult ? (
           <>
-            {/* Enhanced Hero Section */}
             <div className="relative h-screen bg-gradient-to-br from-gray-900 to-slate-950 dark:from-gray-900 dark:to-black">
               <Lightning
                 hue={220}
@@ -358,7 +327,6 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Demo Showcase Section */}
             <section className="py-20 relative">
               <div className="container mx-auto px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto text-center mb-12">
@@ -396,10 +364,8 @@ function HomePageContent() {
               </div>
             </section>
 
-            {/* Enhanced Features Grid */}
             <ModernFeaturesGrid />
 
-            {/* Enhanced Project Input */}
             <section className="py-20">
               <div className="container mx-auto px-6 lg:px-8">
                 <ProjectInput
@@ -412,7 +378,6 @@ function HomePageContent() {
               </div>
             </section>
 
-            {/* AI Status Section */}
             <section className="py-20 glass">
               <div className="container mx-auto px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
@@ -434,10 +399,8 @@ function HomePageContent() {
             </section>
           </>
         ) : (
-          /* Enhanced Analysis Results */
           <div className="py-8 min-h-screen">
             <div className="container mx-auto px-6 lg:px-8">
-              {/* Enhanced Header for Results */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                   <Button
@@ -495,15 +458,16 @@ function HomePageContent() {
                 </Card>
               </div>
 
-              {/* Enhanced Visualization with Knowledge Graph */}
-              <AnalysisResults data={analysisResult} />
+              <AnalysisResults
+                analysisResult={analysisResult}
+                setAnalysisResult={setAnalysisResult}
+              />
             </div>
           </div>
         )}
 
-        {/* 🔄 Интеллектуальная система мониторинга прогресса */}
         <ProgressMonitor
-          projectPath={projectPath} // Added projectPath prop
+          projectPath={projectPath}
           isActive={isAnalyzing && !showDemo}
           progress={{
             stage: progress?.stage ?? (isAnalyzing ? 'initializing' : 'completed'),
@@ -511,17 +475,16 @@ function HomePageContent() {
             filesProcessed: progress?.filesProcessed ?? 0,
             totalFiles: progress?.totalFiles ?? 0,
             currentFile: progress?.currentFile ?? '',
-            startTime: analysisStartTime || new Date(), // Use state here
+            startTime: analysisStartTime || new Date(),
             estimatedCompletion: progress?.stage === 'completed' ? new Date() : undefined,
-            metadata: progress?.metadata ?? {} // Assuming metadata might come from SSE (progress.metadata needs to be part of SseProgressEvent if used)
+            metadata: progress?.metadata ?? {}
           }}
-          logs={progressLogs.slice(-10)} // Show last 10 log messages
+          logs={progressLogs.slice(-10)}
         />
       </main>
-      {/* End of Main Content */}
 
-      {/* Enhanced Footer */}
       <ModernFooter />
     </div>
   );
 }
+export default HomePage;
