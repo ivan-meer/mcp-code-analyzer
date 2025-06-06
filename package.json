@@ -8,24 +8,18 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:mcp\"",
     "start:frontend": "cd apps/web && npm run dev",
     "start:backend": "cd apps/api && python main.py",
     "start:mcp": "cd packages/mcp-servers && npm run dev",
-    "install:all": "npm install && cd apps/web && npm install && cd ../api && pip install -r requirements.txt && cd ../../packages/mcp-servers && npm install",
-    "clean": "turbo run clean",
-    "test": "turbo run test"
+    "install:all": "npm install && cd apps/web && npm install && cd ../api && pip install -r requirements.txt && cd ../../packages/mcp-servers && npm install"
   },
   "devDependencies": {
     "@types/node": "^18.0.0",
     "concurrently": "^8.2.2",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
-    "turbo": "^1.13.0",
     "typescript": "^5.4.0"
   },
   "packageManager": "npm@10.0.0",
