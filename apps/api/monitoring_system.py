@@ -22,6 +22,7 @@ from enum import Enum
 import psutil
 import os
 from pathlib import Path
+from coloredlogs import ColoredFormatter
 
 # 📊 Типы событий для детального отслеживания
 class EventType(Enum):
