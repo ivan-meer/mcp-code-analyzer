@@ -102,4 +102,12 @@ describe('ComplexityAnalyzer', () => {
     expect(analyzer.calculateCyclomaticComplexity(code)).toBe(2); // base 1 + if
   });
 
+  it('should ignore keywords in nested template literals', () => {
+    const code = `
+      const tpl = \`foo \${bar ? \`if\` : 'case'} baz\`;
+      if (bar) {}
+    `;
+    expect(analyzer.calculateCyclomaticComplexity(code)).toBe(2); // base 1 + if
+  });
+
 });

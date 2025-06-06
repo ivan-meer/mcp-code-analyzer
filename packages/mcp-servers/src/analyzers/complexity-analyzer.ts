@@ -4,13 +4,77 @@ export class ComplexityAnalyzer {
    * counting keywords that appear inside them.
    */
   private sanitize(code: string): string {
-    // Remove single line comments
-    let sanitized = code.replace(/\/\/.*$/gm, '');
-    // Remove block comments
-    sanitized = sanitized.replace(/\/\*[\s\S]*?\*\//g, '');
-    // Remove string literals (", ', `) including multiline template strings
-    sanitized = sanitized.replace(/(['"`])(?:\\.|(?!\1)[^\\])*?\1/gs, '');
-    return sanitized;
+    // Remove string literals first so that comment markers inside strings are ignored
+    let result = '';
+    let inSingle = false;
+    let inDouble = false;
+    let inTemplate = false;
+    let braceDepth = 0;
+    let escaped = false;
+
+    for (let i = 0; i < code.length; i++) {
+      const ch = code[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (inSingle) {
+        if (ch === '\\') {
+          escaped = true;
+        } else if (ch === "'") {
+          inSingle = false;
+        }
+        continue;
+      }
+
+      if (inDouble) {
+        if (ch === '\\') {
+          escaped = true;
+        } else if (ch === '"') {
+          inDouble = false;
+        }
+        continue;
+      }
+
+      if (inTemplate) {
+        if (ch === '\\') {
+          escaped = true;
+        } else if (ch === '`' && braceDepth === 0) {
+          inTemplate = false;
+        } else if (ch === '{' && code[i - 1] === '$') {
+          braceDepth++;
+        } else if (ch === '{') {
+          braceDepth++;
+        } else if (ch === '}' && braceDepth > 0) {
+          braceDepth--;
+        }
+        continue;
+      }
+
+      if (ch === "'") {
+        inSingle = true;
+        continue;
+      }
+      if (ch === '"') {
+        inDouble = true;
+        continue;
+      }
+      if (ch === '`') {
+        inTemplate = true;
+        braceDepth = 0;
+        continue;
+      }
+
+      result += ch;
+    }
+
+    // Now remove comments from the code without strings
+    result = result.replace(/\/\/.*$/gm, '');
+    result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    return result;
   }
   /**
    * Calculates the cyclomatic complexity of a given piece of code.
