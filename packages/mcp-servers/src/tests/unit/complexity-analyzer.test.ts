@@ -86,4 +86,20 @@ describe('ComplexityAnalyzer', () => {
     expect(analyzer.calculateCyclomaticComplexity(code)).toBe(1);
   });
 
+  it('should ignore keywords in multiline comments', () => {
+    const code = `/*
+      if while for
+      switch case catch
+    */\nconst x = 1;`;
+    expect(analyzer.calculateCyclomaticComplexity(code)).toBe(1);
+  });
+
+  it('should ignore keywords in template literals', () => {
+    const code = `
+      const tpl = \`if while for\ncase catch\`;
+      if (true) {}
+    `;
+    expect(analyzer.calculateCyclomaticComplexity(code)).toBe(2); // base 1 + if
+  });
+
 });

@@ -8,8 +8,8 @@ export class ComplexityAnalyzer {
     let sanitized = code.replace(/\/\/.*$/gm, '');
     // Remove block comments
     sanitized = sanitized.replace(/\/\*[\s\S]*?\*\//g, '');
-    // Remove string literals (", ', `)
-    sanitized = sanitized.replace(/(['"`])(?:\\.|(?!\1)[^\\])*?\1/g, '');
+    // Remove string literals (", ', `) including multiline template strings
+    sanitized = sanitized.replace(/(['"`])(?:\\.|(?!\1)[^\\])*?\1/gs, '');
     return sanitized;
   }
   /**
