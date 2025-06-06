@@ -1,5 +1,18 @@
 export class ComplexityAnalyzer {
   /**
+   * Removes comments and string literals from code to avoid
+   * counting keywords that appear inside them.
+   */
+  private sanitize(code: string): string {
+    // Remove single line comments
+    let sanitized = code.replace(/\/\/.*$/gm, '');
+    // Remove block comments
+    sanitized = sanitized.replace(/\/\*[\s\S]*?\*\//g, '');
+    // Remove string literals (", ', `)
+    sanitized = sanitized.replace(/(['"`])(?:\\.|(?!\1)[^\\])*?\1/g, '');
+    return sanitized;
+  }
+  /**
    * Calculates the cyclomatic complexity of a given piece of code.
    * This is a simplified model and might not cover all edge cases
    * or language-specific constructs perfectly.
@@ -9,8 +22,9 @@ export class ComplexityAnalyzer {
    * A simplified way is to count decision points + 1.
    * Decision points include: if, else if, while, for, switch (cases), catch, ternary operators,
    * logical AND (&&) and OR (||) operators.
-   */
+  */
   calculateCyclomaticComplexity(code: string): number {
+    const cleanCode = this.sanitize(code);
     let complexity = 1; // Base complexity for a straight path
 
     // Keywords that represent decision points
@@ -34,25 +48,25 @@ export class ComplexityAnalyzer {
     const logicalOrRegex = /\|\|/g; // Escaped pipe for OR
 
     // Count keyword-based decision points
-    const keywordMatches = code.match(keywordRegex);
+    const keywordMatches = cleanCode.match(keywordRegex);
     if (keywordMatches) {
       complexity += keywordMatches.length;
     }
 
     // Count ternary operators
-    const ternaryMatches = code.match(ternaryRegex);
+    const ternaryMatches = cleanCode.match(ternaryRegex);
     if (ternaryMatches) {
       complexity += ternaryMatches.length;
     }
 
     // Count logical AND operators
-    const logicalAndMatches = code.match(logicalAndRegex);
+    const logicalAndMatches = cleanCode.match(logicalAndRegex);
     if (logicalAndMatches) {
       complexity += logicalAndMatches.length;
     }
 
     // Count logical OR operators
-    const logicalOrMatches = code.match(logicalOrRegex);
+    const logicalOrMatches = cleanCode.match(logicalOrRegex);
     if (logicalOrMatches) {
       complexity += logicalOrMatches.length;
     }
