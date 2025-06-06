@@ -65,7 +65,7 @@ interface DependencyItemProps {
   className?: string;
 }
 
-const DependencyItem: React.FC<DependencyItemProps> = memo(({
+export const DependencyItem: React.FC<DependencyItemProps> = memo(({
   dependency,
   variant = 'default',
   searchTerm,

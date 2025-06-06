@@ -142,7 +142,7 @@ export const TodosSection: React.FC<TodosSectionProps> = ({
           <div className="flex items-center space-x-2">
             <Button 
               className="outline"
-              size="sm"="sm"
+              size="sm"
               onClick={() => handleExport('csv')}
             >
               <Download className="h-4 w-4 mr-2" />

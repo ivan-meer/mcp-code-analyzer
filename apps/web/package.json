@@ -1,34 +1,19 @@
 {
-  "name": "web",
-  "version": "1.0.0",
+  "name": "mcp-code-analyzer",
+  "version": "0.3.0",
+  "description": "AI-powered code analysis with MCP integration",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@types/three": "^0.160.0",
-    "d3": "^7.8.5",
-    "framer-motion": "^11.0.0",
-    "lucide-react": "^0.294.0",
-    "next": "^15.3.3",
-    "next-themes": "^0.2.1",
-    "openai": "^5.0.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-syntax-highlighter": "^5.8.0",
-    "reactflow": "^11.10.4",
-    "recharts": "^2.15.3",
-    "elkjs": "^0.9.2",
-    "react-simple-code-editor": "^0.13.1",
-    "prismjs": "^1.29.0",
-    "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
-    "three": "^0.160.0",
-    "zustand": "^4.5.0"
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:mcp\"",
+    "start:frontend": "cd apps/web && npm run dev",
+    "start:backend": "cd apps/api && python main.py",
+    "start:mcp": "cd packages/mcp-servers && npm run dev",
+    "install:all": "npm install && cd apps/web && npm install && cd ../api && pip install -r requirements.txt && cd ../../packages/mcp-servers && npm install"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
@@ -41,5 +26,38 @@
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.12",
+    "@radix-ui/react-toast": "^1.2.14",
+    "@types/three": "^0.160.0",
+    "class-variance-authority": "^0.7.1",
+    "d3": "^7.8.5",
+    "elkjs": "^0.9.2",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.513.0",
+    "next": "^15.3.3",
+    "next-themes": "^0.2.1",
+    "openai": "^5.0.1",
+    "prismjs": "^1.29.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-simple-code-editor": "^0.13.1",
+    "react-syntax-highlighter": "^5.8.0",
+    "reactflow": "^11.10.4",
+    "recharts": "^2.15.3",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.160.0",
+    "zustand": "^4.5.0"
   }
 }
